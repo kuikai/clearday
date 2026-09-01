@@ -1,0 +1,15 @@
+---
+description: Material 3 UI, light/dark mode, paywall and trial messaging
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# UI / UX
+
+- Clean, minimal Material 3 design
+- Support both light and dark mode
+- Use good spacing and a modern look
+- Make the free trial limit obvious to the user
+- Paywall must clearly say **“One-time purchase • No subscription”**
+
+Do not hide remaining free uses. Show a clear limit (e.g. “2 of 5 free lists used”) before prompting Pro.

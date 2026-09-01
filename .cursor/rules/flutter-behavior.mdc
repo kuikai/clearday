@@ -1,0 +1,12 @@
+---
+description: Offline-first behavior, local persistence, and MVP scope
+alwaysApply: true
+---
+
+# Behavior & Scope
+
+- App must work fully **offline** except purchases
+- Save important data locally with `shared_preferences`
+- After purchase, Pro status must update immediately (force-refresh CustomerInfo)
+- Ask before adding complex features
+- Ship a solid MVP first — do not expand scope unprompted

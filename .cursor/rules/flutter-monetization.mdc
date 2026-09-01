@@ -1,0 +1,26 @@
+---
+description: Free trial + one-time Pro unlock via RevenueCat. Never subscriptions.
+alwaysApply: true
+---
+
+# Monetization
+
+- Model: **Free trial + one-time Pro unlock**. Never use subscriptions.
+- Pro price target: **$1.99**
+- Free version must be limited but still useful
+- Pro unlocks unlimited usage plus extras (stats, recurring, multiple lists, etc.)
+- Always include a **Restore Purchase** button
+- Always handle loading and error states for purchases
+- After purchase or restore, **force refresh CustomerInfo** so Pro status updates immediately
+
+Paywall copy must include: **“One-time purchase • No subscription”**
+
+```dart
+// ✅ GOOD — refresh entitlement after purchase/restore
+final customerInfo = await Purchases.purchasePackage(package);
+await Purchases.getCustomerInfo(); // force refresh
+ref.invalidate(proStatusProvider);
+
+// ❌ BAD — assume purchase result is enough, or use subscriptions
+await Purchases.purchasePackage(package);
+```

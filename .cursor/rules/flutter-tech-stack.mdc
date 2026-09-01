@@ -1,0 +1,15 @@
+---
+description: Flutter tech stack and architecture defaults for this project
+alwaysApply: true
+---
+
+# Flutter Tech Stack
+
+- Always use Flutter with Material 3
+- State management: Riverpod
+- Local storage: shared_preferences
+- In-app purchases: RevenueCat (`purchases_flutter`)
+- Notifications: flutter_local_notifications
+- Prefer simple, clean architecture — no extra layers unless needed
+
+When creating a new app, reuse the same patterns as previous apps in this workspace.

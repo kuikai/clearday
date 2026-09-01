@@ -1,0 +1,25 @@
+---
+description: Log every file, feature, and change the agent creates
+alwaysApply: true
+---
+
+# Log What You Create
+
+Whenever you create or change something, append a short entry to `CHANGELOG.md` in the project root.
+
+Log:
+- New files, screens, widgets, providers, services
+- New features or behavior
+- Rule, config, or dependency changes
+
+Do not log tiny typo/format-only edits.
+
+Entry format:
+
+```markdown
+## YYYY-MM-DD
+- **Added** `lib/screens/paywall_screen.dart` — one-time Pro paywall
+- **Updated** `lib/providers/pro_status_provider.dart` — refresh CustomerInfo after purchase
+```
+
+Use **Added** / **Updated** / **Removed**. Keep each line to one sentence. Create `CHANGELOG.md` if it does not exist.

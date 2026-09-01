@@ -1,0 +1,33 @@
+---
+description: Folder structure, widget size, and Dart code style
+globs: "**/*.dart"
+alwaysApply: false
+---
+
+# Code Style & Structure
+
+Keep code simple and readable. Prefer small, focused widgets.
+
+Use this folder layout:
+
+```
+lib/
+  core/
+  models/
+  providers/
+  services/
+  screens/
+  widgets/
+```
+
+- Put shared constants, theme, and helpers in `lib/core/`
+- Put Riverpod providers in `lib/providers/`
+- Put RevenueCat, storage, and notification logic in `lib/services/`
+- Screens compose widgets; widgets stay small and reusable
+
+```dart
+// ✅ GOOD — small widget, loading/error handled at the call site
+class RestorePurchaseButton extends ConsumerWidget { ... }
+
+// ❌ BAD — giant screen with purchase, storage, and UI mixed together
+```
