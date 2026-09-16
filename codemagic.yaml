@@ -9,22 +9,28 @@ workflows:
       flutter: 3.35.5
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.mikkdixen.clearday
       vars:
+        BUNDLE_ID: com.mikkdixen.clearday
         APP_STORE_APPLE_ID: "6811624924"
     scripts:
       - name: Set iOS bundle identifier
         script: |
           find ios -name project.pbxproj -print0 | xargs -0 sed -i '' 's/com.clearday.clearday/com.mikkdixen.clearday/g'
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/Runner/Info.plist || true
+      - name: Set up keychain
+        script: keychain initialize
+      - name: Fetch or create App Store signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --platform IOS \
+            --create
+      - name: Add certificates to keychain
+        script: keychain add-certificates
       - name: Set up code signing settings on Xcode project
-        script: |
-          xcode-project use-profiles
+        script: xcode-project use-profiles
       - name: Get Flutter packages
-        script: |
-          flutter pub get
+        script: flutter pub get
       - name: Install pods
         script: |
           find . -name "Podfile" -execdir pod install \;
