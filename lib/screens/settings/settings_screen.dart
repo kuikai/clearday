@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -130,27 +129,28 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          if (kDebugMode) ...[
-            const SizedBox(height: 16),
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    title: const Text('Unlock Pro (debug)'),
-                    onTap: () {
-                      ref.read(proProvider.notifier).unlockProForTesting();
-                    },
+          const SizedBox(height: 16),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('Unlock Pro on this iPhone'),
+                  subtitle: const Text(
+                    'Temporary until App Store purchase is wired',
                   ),
-                  ListTile(
-                    title: const Text('Reset Pro (debug)'),
-                    onTap: () {
-                      ref.read(proProvider.notifier).resetProForTesting();
-                    },
-                  ),
-                ],
-              ),
+                  onTap: () {
+                    ref.read(proProvider.notifier).unlockProForTesting();
+                  },
+                ),
+                ListTile(
+                  title: const Text('Reset Pro on this iPhone'),
+                  onTap: () {
+                    ref.read(proProvider.notifier).resetProForTesting();
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
           const SizedBox(height: 24),
           Text(
             AppConstants.appTagline,
