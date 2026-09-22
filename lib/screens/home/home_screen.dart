@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../models/task_group.dart';
 import '../../providers/tasks_provider.dart';
 import '../../widgets/empty_state.dart';
@@ -10,6 +11,7 @@ import '../../widgets/limit_banner.dart';
 import '../group/group_tasks_screen.dart';
 import '../paywall/paywall_screen.dart';
 import '../settings/settings_screen.dart';
+import '../task_editor/task_editor_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -37,11 +39,26 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addGroup(context, ref),
-        tooltip: 'Add group',
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Group'),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'home_add_group',
+            onPressed: () => _addGroup(context, ref),
+            tooltip: 'Add group',
+            icon: const Icon(Icons.create_new_folder_outlined),
+            label: const Text('Group'),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'home_add_task',
+            onPressed: () => _addTask(context, ref),
+            tooltip: 'Add task',
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Task'),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -63,7 +80,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   )
                 : ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 160),
                     children: [
                       for (final group in groups)
                         GroupTile(
@@ -80,6 +97,41 @@ class HomeScreen extends ConsumerWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _addTask(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(appDataProvider.notifier);
+    if (!notifier.canAddTask) {
+      await showPaywall(context);
+      return;
+    }
+
+    var data = ref.read(appDataProvider);
+    if (data.groups.isEmpty) {
+      if (!notifier.canAddGroup) {
+        await showPaywall(context);
+        return;
+      }
+      await notifier.addGroup(AppConstants.defaultGroupName);
+      data = ref.read(appDataProvider);
+    }
+
+    final groupId = data.selectedGroup?.id ??
+        (data.topLevelGroups.isNotEmpty
+            ? data.topLevelGroups.first.id
+            : data.groups.first.id);
+    await notifier.selectGroup(groupId);
+    if (!context.mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TaskEditorScreen(
+          task: notifier.newTaskDraft(groupId: groupId),
+          isNew: true,
+        ),
       ),
     );
   }
