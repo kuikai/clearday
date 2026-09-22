@@ -28,10 +28,7 @@ class RevenueCatService {
 
     final apiKey = _resolveApiKey();
     if (apiKey.isEmpty) {
-      debugPrint(
-        '[RevenueCat] Skipping configure — Google Play API key is empty. '
-        'Paste it in revenue_cat_config.dart before release.',
-      );
+      debugPrint('[RevenueCat] Skipping configure — API key is empty.');
       return;
     }
 
@@ -41,8 +38,6 @@ class RevenueCatService {
   }
 
   /// True when a configured Pro entitlement is active.
-  ///
-  /// Matches any ID in [RevenueCatConfig.proEntitlementIds] (case-insensitive).
   bool hasProEntitlement(CustomerInfo customerInfo) {
     final accepted = RevenueCatConfig.proEntitlementIds
         .map((id) => id.toLowerCase())
@@ -69,7 +64,6 @@ class RevenueCatService {
     return Purchases.getCustomerInfo();
   }
 
-  /// Drops the local cache, then fetches the latest [CustomerInfo] from the network.
   Future<CustomerInfo> refreshCustomerInfo() async {
     _ensureConfigured();
     await Purchases.invalidateCustomerInfoCache();
@@ -82,7 +76,6 @@ class RevenueCatService {
     return offerings.current;
   }
 
-  /// Prefers [RevenueCatConfig.proProductId], then lifetime, then first package.
   Package? resolveLifetimePackage(Offering offering) {
     for (final package in offering.availablePackages) {
       if (package.storeProduct.identifier == RevenueCatConfig.proProductId) {
@@ -105,13 +98,11 @@ class RevenueCatService {
     return Purchases.restorePurchases();
   }
 
-  /// Creates a new anonymous RevenueCat user (drops the previous test identity).
   Future<CustomerInfo> logOut() {
     _ensureConfigured();
     return Purchases.logOut();
   }
 
-  /// Switches to a brand-new app user ID so Test Store Pro does not follow.
   Future<CustomerInfo> switchToFreshTestUser() async {
     _ensureConfigured();
     final freshId = 'test_${DateTime.now().microsecondsSinceEpoch}';
@@ -149,19 +140,17 @@ class RevenueCatService {
     }
   }
 
-  /// Android uses the Google Play production SDK key (including release builds).
   static String _resolveApiKey() {
     if (Platform.isAndroid) {
       return RevenueCatConfig.googlePlayApiKey;
     }
-    throw UnsupportedError(
-      'RevenueCat is not configured for this platform. '
-      'Add an App Store API key in revenue_cat_config.dart.',
-    );
+    if (Platform.isIOS || Platform.isMacOS) {
+      return RevenueCatConfig.appStoreApiKey;
+    }
+    return '';
   }
 }
 
-/// Result of a purchase or restore attempt for the UI layer.
 sealed class PurchaseActionResult {
   const PurchaseActionResult();
 }
