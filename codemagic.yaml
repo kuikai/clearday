@@ -21,8 +21,8 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/Runner/Info.plist || true
       - name: Generate full-bleed iOS icons
         script: |
-          pip3 install --quiet pillow
-          python3 scripts/make_ios_icon.py
+          pip3 install --user --quiet pillow || true
+          python3 scripts/make_ios_icon.py || echo "Icon script failed, using existing icons"
       - name: Set up keychain
         script: keychain initialize
       - name: Fetch or create App Store signing files
