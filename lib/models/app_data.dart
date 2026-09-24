@@ -112,6 +112,35 @@ class AppData {
     }).length;
   }
 
+  /// Tasks due today across every group (includes completed, so they stay visible).
+  List<Task> todaysTasks(DateTime now) {
+    final result = tasks.where((task) {
+      final due = task.dueAt;
+      return due != null && isSameDay(due, now);
+    }).toList();
+    result.sort((a, b) {
+      if (a.isCompleted != b.isCompleted) {
+        return a.isCompleted ? 1 : -1;
+      }
+      final dueCmp = a.dueAt!.compareTo(b.dueAt!);
+      if (dueCmp != 0) {
+        return dueCmp;
+      }
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    return result;
+  }
+
+  /// Incomplete tasks past due across every group.
+  List<Task> overdueTasks(DateTime now) {
+    final result = tasks.where((task) {
+      final due = task.dueAt;
+      return !task.isCompleted && due != null && isBeforeToday(due, now);
+    }).toList();
+    result.sort((a, b) => a.dueAt!.compareTo(b.dueAt!));
+    return result;
+  }
+
   AppData copyWith({
     List<TaskGroup>? groups,
     List<Task>? tasks,

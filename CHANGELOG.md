@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-24
+- **Fixed** task editor “All day” subtitle — corrupted `Â·` separator was a bad middle-dot character
+- **Updated** `lib/screens/task_editor/task_editor_screen.dart` — Save FAB bottom-right (keeps AppBar Save too)
+- **Updated** `lib/screens/home/home_screen.dart` — deduped Groups/Today builders for phone and split layouts; shared create-group helper
+- **Fixed** `lib/widgets/group_name_dialog.dart` — dispose TextEditingController in State to avoid crash while dialog closes
+- **Updated** group rename — edit icon on group screen; long-press a group tile on home (Rename still in ⋮ menu)
+- **Updated** Today on home — completed due-today tasks stay visible; header shows `4/6 done`
+- **Updated** `lib/screens/home/home_screen.dart` — Task FAB above Group FAB
+- **Updated** `lib/screens/home/home_screen.dart` — home +Task always uses the first top-level group (not last opened)
+- **Updated** `lib/screens/home/home_screen.dart` — Groups plus Today (overdue/due today); phone stacks them, wide screens split side-by-side; home +Task drafts with due date today
+- **Updated** `lib/models/app_data.dart` — `todaysTasks` and `overdueTasks` across all groups
+- **Updated** `lib/providers/tasks_provider.dart` — `newTaskDraft` accepts optional due date
+- **Updated** `lib/widgets/task_tile.dart` — optional subtitle for group path on home
+
 ## 2026-08-27
 - **Updated** `lib/widgets/group_name_dialog.dart` — no autofocus on name field to avoid Samsung keyboard side toolbar popping over the dialog
 

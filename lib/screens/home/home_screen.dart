@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/date_utils.dart';
+import '../../models/app_data.dart';
+import '../../models/task.dart';
 import '../../models/task_group.dart';
 import '../../providers/tasks_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/group_name_dialog.dart';
 import '../../widgets/group_tile.dart';
 import '../../widgets/limit_banner.dart';
+import '../../widgets/section_header.dart';
+import '../../widgets/task_tile.dart';
 import '../group/group_tasks_screen.dart';
 import '../paywall/paywall_screen.dart';
 import '../settings/settings_screen.dart';
@@ -16,11 +21,17 @@ import '../task_editor/task_editor_screen.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  static const double _splitBreakpoint = 720;
+  static const EdgeInsets _panePadding =
+      EdgeInsets.fromLTRB(16, 8, 16, 160);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(appDataProvider);
     final groups = data.topLevelGroups;
     final now = DateTime.now();
+    final overdue = data.overdueTasks(now);
+    final today = data.todaysTasks(now);
 
     return Scaffold(
       appBar: AppBar(
@@ -44,19 +55,19 @@ class HomeScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           FloatingActionButton.extended(
+            heroTag: 'home_add_task',
+            onPressed: () => _addTask(context, ref),
+            tooltip: 'Add task for today',
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Task'),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
             heroTag: 'home_add_group',
             onPressed: () => _addGroup(context, ref),
             tooltip: 'Add group',
             icon: const Icon(Icons.create_new_folder_outlined),
             label: const Text('Group'),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton.extended(
-            heroTag: 'home_add_task',
-            onPressed: () => _addTask(context, ref),
-            tooltip: 'Add task',
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Task'),
           ),
         ],
       ),
@@ -67,38 +78,144 @@ class HomeScreen extends ConsumerWidget {
             child: LimitBanner(),
           ),
           Expanded(
-            child: groups.isEmpty
-                ? EmptyState(
-                    title: 'Start with a group',
-                    message: 'Create House Work, Workout, or Work, '
-                        'then add tasks inside it.',
-                    icon: Icons.folder_outlined,
-                    action: FilledButton.icon(
-                      onPressed: () => _addGroup(context, ref),
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Add group'),
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 160),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final groupsChildren = _groupsChildren(
+                  context,
+                  ref,
+                  groups: groups,
+                  data: data,
+                  now: now,
+                );
+                final todayChildren = _todayChildren(
+                  context,
+                  ref,
+                  data: data,
+                  overdue: overdue,
+                  today: today,
+                );
+
+                if (constraints.maxWidth >= _splitBreakpoint) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final group in groups)
-                        GroupTile(
-                          group: group,
-                          activeCount: data.activeCountFor(group.id),
-                          overdueCount: data.overdueCountFor(group.id, now),
-                          onOpen: () => _openGroup(context, ref, group),
-                          onAddSubgroup: () =>
-                              _addSubgroup(context, ref, group.id),
-                          onRename: () => _renameGroup(context, ref, group),
-                          onDelete: () => _deleteGroup(context, ref, group),
+                      Expanded(
+                        child: ListView(
+                          padding: _panePadding,
+                          children: groupsChildren,
                         ),
+                      ),
+                      VerticalDivider(
+                        width: 1,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outlineVariant
+                            .withValues(alpha: 0.6),
+                      ),
+                      Expanded(
+                        child: ListView(
+                          padding: _panePadding,
+                          children: todayChildren,
+                        ),
+                      ),
                     ],
-                  ),
+                  );
+                }
+
+                return ListView(
+                  padding: _panePadding,
+                  children: [
+                    ...groupsChildren,
+                    const SizedBox(height: 8),
+                    ...todayChildren,
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _groupsChildren(
+    BuildContext context,
+    WidgetRef ref, {
+    required List<TaskGroup> groups,
+    required AppData data,
+    required DateTime now,
+  }) {
+    return [
+      SectionHeader(title: 'Groups', count: groups.length),
+      if (groups.isEmpty)
+        EmptyState(
+          title: 'No groups yet',
+          message: 'Create House Work, Workout, or Work to organize tasks.',
+          icon: Icons.folder_outlined,
+          action: FilledButton.icon(
+            onPressed: () => _addGroup(context, ref),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add group'),
+          ),
+        )
+      else
+        for (final group in groups)
+          GroupTile(
+            group: group,
+            activeCount: data.activeCountFor(group.id),
+            overdueCount: data.overdueCountFor(group.id, now),
+            onOpen: () => _openGroup(context, ref, group),
+            onAddSubgroup: () => _addSubgroup(context, ref, group.id),
+            onRename: () => _renameGroup(context, ref, group),
+            onDelete: () => _deleteGroup(context, ref, group),
+          ),
+    ];
+  }
+
+  List<Widget> _todayChildren(
+    BuildContext context,
+    WidgetRef ref, {
+    required AppData data,
+    required List<Task> overdue,
+    required List<Task> today,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final doneCount = today.where((task) => task.isCompleted).length;
+    final isEmpty = overdue.isEmpty && today.isEmpty;
+
+    return [
+      SectionHeader(
+        title: 'Today',
+        progressLabel:
+            today.isEmpty ? null : '$doneCount/${today.length} done',
+      ),
+      if (isEmpty)
+        EmptyState(
+          title: 'Nothing due today',
+          message: 'Tap Task to add something for today — it shows up here.',
+          icon: Icons.wb_sunny_outlined,
+          action: FilledButton.icon(
+            onPressed: () => _addTask(context, ref),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add task'),
+          ),
+        )
+      else ...[
+        if (overdue.isNotEmpty)
+          _HomeTaskSection(
+            title: 'Overdue',
+            tasks: overdue,
+            data: data,
+            accent: colorScheme.error,
+          ),
+        if (today.isNotEmpty)
+          _HomeTaskSection(
+            title: 'Due today',
+            tasks: today,
+            data: data,
+          ),
+      ],
+    ];
   }
 
   Future<void> _addTask(BuildContext context, WidgetRef ref) async {
@@ -118,10 +235,10 @@ class HomeScreen extends ConsumerWidget {
       data = ref.read(appDataProvider);
     }
 
-    final groupId = data.selectedGroup?.id ??
-        (data.topLevelGroups.isNotEmpty
-            ? data.topLevelGroups.first.id
-            : data.groups.first.id);
+    // First top-level group — predictable home for Today tasks.
+    final groupId = data.topLevelGroups.isNotEmpty
+        ? data.topLevelGroups.first.id
+        : data.groups.first.id;
     await notifier.selectGroup(groupId);
     if (!context.mounted) {
       return;
@@ -129,7 +246,10 @@ class HomeScreen extends ConsumerWidget {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => TaskEditorScreen(
-          task: notifier.newTaskDraft(groupId: groupId),
+          task: notifier.newTaskDraft(
+            groupId: groupId,
+            dueAt: dateOnly(DateTime.now()),
+          ),
           isNew: true,
         ),
       ),
@@ -152,20 +272,25 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _addSubgroup(
+  Future<void> _createGroup(
     BuildContext context,
-    WidgetRef ref,
-    String parentId,
-  ) async {
+    WidgetRef ref, {
+    required String dialogTitle,
+    String? parentId,
+  }) async {
     final notifier = ref.read(appDataProvider.notifier);
-    if (!notifier.canAddSubgroup) {
+    final allowed =
+        parentId == null ? notifier.canAddGroup : notifier.canAddSubgroup;
+    if (!allowed) {
       await showPaywall(context);
       return;
     }
-    final name = await promptGroupName(context, title: 'New subgroup');
+
+    final name = await promptGroupName(context, title: dialogTitle);
     if (name == null || name.trim().isEmpty) {
       return;
     }
+
     final result = await notifier.addGroup(name, parentId: parentId);
     if (result == SaveTaskResult.blockedByGroupLimit && context.mounted) {
       await showPaywall(context);
@@ -174,34 +299,28 @@ class HomeScreen extends ConsumerWidget {
     if (!context.mounted) {
       return;
     }
+
     final group = ref.read(appDataProvider).selectedGroup;
     if (group != null) {
       await _openGroup(context, ref, group);
     }
   }
 
-  Future<void> _addGroup(BuildContext context, WidgetRef ref) async {
-    final notifier = ref.read(appDataProvider.notifier);
-    if (!notifier.canAddGroup) {
-      await showPaywall(context);
-      return;
-    }
-    final name = await promptGroupName(context, title: 'New group');
-    if (name == null || name.trim().isEmpty) {
-      return;
-    }
-    final result = await notifier.addGroup(name);
-    if (result == SaveTaskResult.blockedByGroupLimit && context.mounted) {
-      await showPaywall(context);
-      return;
-    }
-    if (!context.mounted) {
-      return;
-    }
-    final group = ref.read(appDataProvider).selectedGroup;
-    if (group != null) {
-      await _openGroup(context, ref, group);
-    }
+  Future<void> _addSubgroup(
+    BuildContext context,
+    WidgetRef ref,
+    String parentId,
+  ) {
+    return _createGroup(
+      context,
+      ref,
+      dialogTitle: 'New subgroup',
+      parentId: parentId,
+    );
+  }
+
+  Future<void> _addGroup(BuildContext context, WidgetRef ref) {
+    return _createGroup(context, ref, dialogTitle: 'New group');
   }
 
   Future<void> _renameGroup(
@@ -229,5 +348,55 @@ class HomeScreen extends ConsumerWidget {
     if (confirmed) {
       await ref.read(appDataProvider.notifier).deleteGroup(group.id);
     }
+  }
+}
+
+class _HomeTaskSection extends ConsumerWidget {
+  const _HomeTaskSection({
+    required this.title,
+    required this.tasks,
+    required this.data,
+    this.accent,
+  });
+
+  final String title;
+  final List<Task> tasks;
+  final AppData data;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            title: title,
+            accent: accent,
+          ),
+          ...tasks.map((task) {
+            return TaskTile(
+              key: ValueKey(task.id),
+              task: task,
+              subtitle: data.groupPath(task.groupId),
+              onToggle: () {
+                ref.read(appDataProvider.notifier).toggleCompleted(task.id);
+              },
+              onOpen: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TaskEditorScreen(
+                      task: task,
+                      isNew: false,
+                    ),
+                  ),
+                );
+              },
+            );
+          }),
+        ],
+      ),
+    );
   }
 }

@@ -9,11 +9,13 @@ class TaskTile extends StatelessWidget {
     required this.task,
     required this.onToggle,
     required this.onOpen,
+    this.subtitle,
   });
 
   final Task task;
   final VoidCallback onToggle;
   final VoidCallback onOpen;
+  final String? subtitle;
 
   bool get _isOverdue {
     final due = task.dueAt;
@@ -99,6 +101,18 @@ class TaskTile extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (subtitle != null && subtitle!.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.45),
+                              ),
+                            ),
+                          ],
                           if (due != null) ...[
                             const SizedBox(height: 4),
                             Text(

@@ -201,13 +201,19 @@ class AppDataNotifier extends StateNotifier<AppData> {
     );
   }
 
-  Task newTaskDraft({required String groupId}) {
+  Task newTaskDraft({
+    required String groupId,
+    DateTime? dueAt,
+    bool dueHasTime = false,
+  }) {
     final now = DateTime.now();
     return Task(
       id: _uuid.v4(),
       groupId: groupId,
       title: '',
       createdAt: now,
+      dueAt: dueAt,
+      dueHasTime: dueHasTime,
     );
   }
 

@@ -42,6 +42,11 @@ class GroupTasksScreen extends ConsumerWidget {
         title: Text(group.name),
         actions: [
           IconButton(
+            tooltip: 'Rename group',
+            onPressed: () => _renameGroup(context, ref, group),
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
             tooltip: 'Add subgroup',
             onPressed: () => _addSubgroup(context, ref),
             icon: const Icon(Icons.create_new_folder_outlined),
@@ -166,7 +171,7 @@ class GroupTasksScreen extends ConsumerWidget {
   ) async {
     final name = await promptGroupName(
       context,
-      title: 'Rename subgroup',
+      title: group.isTopLevel ? 'Rename group' : 'Rename subgroup',
       initial: group.name,
     );
     if (name == null) {

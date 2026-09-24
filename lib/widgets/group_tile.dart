@@ -35,6 +35,7 @@ class GroupTile extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onOpen,
+          onLongPress: onRename,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
             child: Row(

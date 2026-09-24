@@ -79,6 +79,12 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _saving ? null : _save,
+        tooltip: 'Save task',
+        icon: const Icon(Icons.check_rounded),
+        label: Text(_saving ? 'Saving…' : 'Save'),
+      ),
       body: groups.isEmpty
           ? const Center(
               child: Padding(
@@ -87,7 +93,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
               ),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
               children: [
                 TextField(
                   controller: _titleController,
@@ -157,7 +163,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                           subtitle: Text(
                             _dueHasTime
                                 ? DateFormat.jm().format(_dueAt!)
-                                : 'All day Â· reminder at 9:00 AM',
+                                : 'All day · reminder at 9:00 AM',
                           ),
                           value: _dueHasTime,
                           onChanged: _toggleDueTime,
