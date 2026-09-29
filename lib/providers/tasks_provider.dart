@@ -35,6 +35,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
   AppDataNotifier(this._storage, this._notifications, this._ref)
       : super(_storage.loadAppData()) {
     _persist();
+    Future.microtask(_reactivateRecurringTasks);
     _syncReminders();
   }
 
@@ -110,6 +111,94 @@ class AppDataNotifier extends StateNotifier<AppData> {
     await _persist();
   }
 
+  /// Duplicates a group (and nested subgroups) plus its tasks as fresh copies.
+  Future<SaveTaskResult> copyGroup(String groupId) async {
+    final source = state.groupById(groupId);
+    if (source == null) {
+      return SaveTaskResult.saved;
+    }
+
+    final sourceIds = state.descendantGroupIds(groupId);
+    final nestedSubgroupCount = sourceIds.length - 1;
+
+    if (source.isTopLevel) {
+      if (!canAddGroup) {
+        return SaveTaskResult.blockedByGroupLimit;
+      }
+      if (!isPro &&
+          state.subgroupCount + nestedSubgroupCount >
+              AppConstants.freeSubgroupLimit) {
+        return SaveTaskResult.blockedByGroupLimit;
+      }
+    } else {
+      if (!isPro &&
+          state.subgroupCount + sourceIds.length >
+              AppConstants.freeSubgroupLimit) {
+        return SaveTaskResult.blockedByGroupLimit;
+      }
+    }
+
+    final tasksToCopy =
+        state.tasks.where((task) => sourceIds.contains(task.groupId)).toList();
+    if (!isPro &&
+        state.activeTaskCount + tasksToCopy.length >
+            AppConstants.freeActiveTaskLimit) {
+      return SaveTaskResult.blockedByTaskLimit;
+    }
+
+    final now = DateTime.now();
+    final idMap = <String, String>{
+      for (final id in sourceIds) id: _uuid.v4(),
+    };
+
+    final newGroups = <TaskGroup>[];
+    void addBranch(String oldId, String? mappedParentId) {
+      final old = state.groupById(oldId);
+      if (old == null) {
+        return;
+      }
+      final isRoot = oldId == groupId;
+      newGroups.add(
+        TaskGroup(
+          id: idMap[oldId]!,
+          name: isRoot ? '${old.name} (copy)' : old.name,
+          createdAt: now,
+          parentId: isRoot ? old.parentId : mappedParentId,
+        ),
+      );
+      for (final child in state.subgroupsOf(oldId)) {
+        addBranch(child.id, idMap[oldId]);
+      }
+    }
+
+    addBranch(groupId, null);
+
+    final newTasks = tasksToCopy.map((task) {
+      final copied = Task(
+        id: _uuid.v4(),
+        groupId: idMap[task.groupId]!,
+        title: task.title,
+        notes: task.notes,
+        dueAt: task.dueAt,
+        dueHasTime: task.dueHasTime,
+        reminderAt: task.reminderAt,
+        isCompleted: false,
+        recurrence: isPro ? task.recurrence : const Recurrence(),
+        createdAt: now,
+      );
+      return _applyFreeReminderRules(copied);
+    }).toList();
+
+    state = state.copyWith(
+      groups: [...state.groups, ...newGroups],
+      tasks: [...state.tasks, ...newTasks],
+      selectedGroupId: idMap[groupId],
+    );
+    await _persist();
+    await _syncReminders();
+    return SaveTaskResult.saved;
+  }
+
   Future<void> deleteGroup(String groupId) async {
     final ids = state.descendantGroupIds(groupId);
     final groups =
@@ -154,6 +243,8 @@ class AppDataNotifier extends StateNotifier<AppData> {
   }
 
   Future<void> toggleCompleted(String taskId) async {
+    await _reactivateRecurringTasks();
+
     final index = state.tasks.indexWhere((task) => task.id == taskId);
     if (index < 0) {
       return;
@@ -165,13 +256,16 @@ class AppDataNotifier extends StateNotifier<AppData> {
       return;
     }
 
-    await _setCompleted(task, completed: true);
     if (isPro && task.recurrence.isEnabled) {
-      await _spawnNextOccurrence(task);
+      await _completeRecurringTask(task);
+      return;
     }
+
+    await _setCompleted(task, completed: true);
   }
 
   Future<void> resyncReminders() async {
+    await _reactivateRecurringTasks();
     await _syncReminders();
   }
 
@@ -231,31 +325,68 @@ class AppDataNotifier extends StateNotifier<AppData> {
     await _syncReminders();
   }
 
-  Future<void> _spawnNextOccurrence(Task completed) async {
-    final base = completed.dueAt ?? DateTime.now();
-    final nextDue = completed.recurrence.nextDueAfter(base);
-    final offset = completed.dueAt != null && completed.reminderAt != null
-        ? completed.dueAt!.difference(completed.reminderAt!)
+  /// Marks the task done and moves its due date to the next occurrence.
+  /// It stays done until that date arrives, then [_reactivateRecurringTasks]
+  /// opens it again — no second task is created.
+  Future<void> _completeRecurringTask(Task task) async {
+    final now = DateTime.now();
+    // Count from "now" if the task was overdue, so the next due is always
+    // in the future and the task stays done until then.
+    final base = task.dueAt == null
+        ? now
+        : (task.dueAt!.isAfter(now) ? task.dueAt! : now);
+    final nextDue = task.recurrence.nextDueAfter(base);
+    final offset = task.dueAt != null && task.reminderAt != null
+        ? task.dueAt!.difference(task.reminderAt!)
         : null;
     final nextReminder = offset == null
         ? defaultReminderFor(
             dueAt: nextDue,
-            dueHasTime: completed.dueHasTime,
+            dueHasTime: task.dueHasTime,
           )
         : nextDue.subtract(offset);
 
-    final next = Task(
-      id: _uuid.v4(),
-      groupId: completed.groupId,
-      title: completed.title,
-      notes: completed.notes,
+    final updated = task.copyWith(
+      isCompleted: true,
+      completedAt: now,
       dueAt: nextDue,
-      dueHasTime: completed.dueHasTime,
+      dueHasTime: task.dueHasTime,
       reminderAt: nextReminder,
-      recurrence: completed.recurrence,
-      createdAt: DateTime.now(),
+      clearReminderAt: nextReminder == null,
     );
-    state = state.copyWith(tasks: [...state.tasks, next]);
+    final tasks = state.tasks
+        .map((item) => item.id == task.id ? updated : item)
+        .toList();
+    state = state.copyWith(tasks: tasks);
+    await _persist();
+    await _syncReminders();
+  }
+
+  /// When a done recurring task's next due date is today or past, open it again.
+  Future<void> reactivateRecurringTasks() => _reactivateRecurringTasks();
+
+  Future<void> _reactivateRecurringTasks() async {
+    final now = DateTime.now();
+    var changed = false;
+    final tasks = state.tasks.map((task) {
+      final due = task.dueAt;
+      if (!task.isCompleted ||
+          !task.recurrence.isEnabled ||
+          due == null ||
+          isAfterToday(due, now)) {
+        return task;
+      }
+      changed = true;
+      return task.copyWith(
+        isCompleted: false,
+        clearCompletedAt: true,
+      );
+    }).toList();
+
+    if (!changed) {
+      return;
+    }
+    state = state.copyWith(tasks: tasks);
     await _persist();
     await _syncReminders();
   }

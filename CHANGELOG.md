@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-28
+- **Updated** recurring tasks — completing keeps the same task done and moves its due date; it reopens when that day arrives (no duplicate task)
+- **Fixed** recurring overdue complete — next due counts from now so the task does not reopen immediately
+- **Updated** home — reactivates due recurring tasks on open/resume
+- **Updated** Repeat UI on task editor — clearer labels (`Off`, `Every few days`, `Weekly`) plus helper text
+- **Added** copy group — duplicates a group, nested subgroups, and tasks as `"Name (copy)"` from the ⋮ menu or group screen
+- **Fixed** `copyGroup` — applies free-tier reminder rules on copied tasks (same as save)
+
 ## 2026-09-24
 - **Fixed** task editor “All day” subtitle — corrupted `Â·` separator was a bad middle-dot character
 - **Updated** `lib/screens/task_editor/task_editor_screen.dart` — Save FAB bottom-right (keeps AppBar Save too)

@@ -123,5 +123,51 @@ void main() {
         AppConstants.freeSubgroupLimit,
       );
     });
+
+    test('copies a group with subgroups and incomplete tasks', () async {
+      final container = await createTestContainer(isPro: true);
+      final home = defaultHomeGroup(container);
+      final kitchen = await addNamedGroup(
+        container,
+        'Kitchen',
+        parentId: home.id,
+      );
+      await addNamedTask(container, title: 'Wipe counters', groupId: kitchen.id);
+      await addNamedTask(container, title: 'Vacuum', groupId: home.id);
+
+      final result = await appNotifier(container).copyGroup(home.id);
+
+      expect(result, SaveTaskResult.saved);
+      final data = container.read(appDataProvider);
+      final copy = data.topLevelGroups.singleWhere(
+        (group) => group.name == 'Home (copy)',
+      );
+      expect(data.subgroupsOf(copy.id).single.name, 'Kitchen');
+      expect(
+        data.tasksForGroup(copy.id).map((task) => task.title),
+        ['Vacuum'],
+      );
+      final copiedKitchen = data.subgroupsOf(copy.id).single;
+      expect(
+        data.tasksForGroup(copiedKitchen.id).map((task) => task.title),
+        ['Wipe counters'],
+      );
+      expect(data.tasks.every((task) => !task.isCompleted), isTrue);
+    });
+
+    test('copying a top-level group is blocked at the free group limit',
+        () async {
+      final container = await createTestContainer();
+      await addNamedGroup(container, 'Workout');
+
+      final result =
+          await appNotifier(container).copyGroup(defaultHomeGroup(container).id);
+
+      expect(result, SaveTaskResult.blockedByGroupLimit);
+      expect(
+        container.read(appDataProvider).topLevelGroupCount,
+        AppConstants.freeGroupLimit,
+      );
+    });
   });
 }

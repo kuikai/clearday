@@ -47,6 +47,11 @@ class GroupTasksScreen extends ConsumerWidget {
             icon: const Icon(Icons.edit_outlined),
           ),
           IconButton(
+            tooltip: 'Copy group',
+            onPressed: () => _copyGroup(context, ref, group),
+            icon: const Icon(Icons.copy_outlined),
+          ),
+          IconButton(
             tooltip: 'Add subgroup',
             onPressed: () => _addSubgroup(context, ref),
             icon: const Icon(Icons.create_new_folder_outlined),
@@ -102,6 +107,7 @@ class GroupTasksScreen extends ConsumerWidget {
                 onAddSubgroup: () =>
                     _addSubgroupUnder(context, ref, subgroup.id),
                 onRename: () => _renameGroup(context, ref, subgroup),
+                onCopy: () => _copyGroup(context, ref, subgroup),
                 onDelete: () => _deleteGroup(context, ref, subgroup),
               ),
           ],
@@ -178,6 +184,22 @@ class GroupTasksScreen extends ConsumerWidget {
       return;
     }
     await ref.read(appDataProvider.notifier).renameGroup(group.id, name);
+  }
+
+  Future<void> _copyGroup(
+    BuildContext context,
+    WidgetRef ref,
+    TaskGroup group,
+  ) async {
+    final result =
+        await ref.read(appDataProvider.notifier).copyGroup(group.id);
+    if (!context.mounted) {
+      return;
+    }
+    if (result == SaveTaskResult.blockedByGroupLimit ||
+        result == SaveTaskResult.blockedByTaskLimit) {
+      await showPaywall(context);
+    }
   }
 
   Future<void> _deleteGroup(

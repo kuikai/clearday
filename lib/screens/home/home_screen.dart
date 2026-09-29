@@ -18,6 +18,44 @@ import '../paywall/paywall_screen.dart';
 import '../settings/settings_screen.dart';
 import '../task_editor/task_editor_screen.dart';
 
+class _RecurringReactivator extends ConsumerStatefulWidget {
+  const _RecurringReactivator();
+
+  @override
+  ConsumerState<_RecurringReactivator> createState() =>
+      _RecurringReactivatorState();
+}
+
+class _RecurringReactivatorState extends ConsumerState<_RecurringReactivator>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reactivate());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _reactivate();
+    }
+  }
+
+  void _reactivate() {
+    ref.read(appDataProvider.notifier).reactivateRecurringTasks();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -73,6 +111,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          const _RecurringReactivator(),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: LimitBanner(),
@@ -167,6 +206,7 @@ class HomeScreen extends ConsumerWidget {
             onOpen: () => _openGroup(context, ref, group),
             onAddSubgroup: () => _addSubgroup(context, ref, group.id),
             onRename: () => _renameGroup(context, ref, group),
+            onCopy: () => _copyGroup(context, ref, group),
             onDelete: () => _deleteGroup(context, ref, group),
           ),
     ];
@@ -337,6 +377,22 @@ class HomeScreen extends ConsumerWidget {
       return;
     }
     await ref.read(appDataProvider.notifier).renameGroup(group.id, name);
+  }
+
+  Future<void> _copyGroup(
+    BuildContext context,
+    WidgetRef ref,
+    TaskGroup group,
+  ) async {
+    final result =
+        await ref.read(appDataProvider.notifier).copyGroup(group.id);
+    if (!context.mounted) {
+      return;
+    }
+    if (result == SaveTaskResult.blockedByGroupLimit ||
+        result == SaveTaskResult.blockedByTaskLimit) {
+      await showPaywall(context);
+    }
   }
 
   Future<void> _deleteGroup(

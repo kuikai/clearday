@@ -10,6 +10,7 @@ class GroupTile extends StatelessWidget {
     required this.overdueCount,
     required this.onOpen,
     required this.onRename,
+    required this.onCopy,
     required this.onDelete,
     this.onAddSubgroup,
     this.isSubgroup = false,
@@ -20,6 +21,7 @@ class GroupTile extends StatelessWidget {
   final int overdueCount;
   final VoidCallback onOpen;
   final VoidCallback onRename;
+  final VoidCallback onCopy;
   final VoidCallback onDelete;
   final VoidCallback? onAddSubgroup;
   final bool isSubgroup;
@@ -103,6 +105,9 @@ class GroupTile extends StatelessWidget {
                     if (value == 'rename') {
                       onRename();
                     }
+                    if (value == 'copy') {
+                      onCopy();
+                    }
                     if (value == 'delete') {
                       onDelete();
                     }
@@ -116,6 +121,10 @@ class GroupTile extends StatelessWidget {
                     const PopupMenuItem(
                       value: 'rename',
                       child: Text('Rename'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'copy',
+                      child: Text('Copy'),
                     ),
                     const PopupMenuItem(
                       value: 'delete',

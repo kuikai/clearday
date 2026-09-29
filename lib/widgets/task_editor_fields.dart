@@ -95,6 +95,8 @@ class RecurrenceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -106,20 +108,35 @@ class RecurrenceCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  Icon(
+                    Icons.repeat_rounded,
+                    size: 20,
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Repeat',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.7),
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
                   if (!enabled) const ProBadge(),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
+              Text(
+                enabled
+                    ? _helperText(recurrence)
+                    : 'Unlock Pro to repeat chores automatically.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.55),
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 14),
               Opacity(
                 opacity: enabled ? 1 : 0.58,
                 child: IgnorePointer(
@@ -136,6 +153,34 @@ class RecurrenceCard extends StatelessWidget {
       ),
     );
   }
+
+  String _helperText(Recurrence recurrence) {
+    switch (recurrence.kind) {
+      case RecurrenceKind.none:
+        return 'One-time task. It stays done when you finish it.';
+      case RecurrenceKind.everyNDays:
+        final days = recurrence.intervalDays < 1 ? 1 : recurrence.intervalDays;
+        return days == 1
+            ? 'After you finish it, it comes back tomorrow.'
+            : 'After you finish it, it comes back in $days days.';
+      case RecurrenceKind.weekly:
+        return 'After you finish it, it comes back next '
+            '${_weekdayWord(recurrence.weekday ?? DateTime.now().weekday)}.';
+    }
+  }
+
+  String _weekdayWord(int weekday) {
+    const labels = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return labels[weekday - 1];
+  }
 }
 
 class _RepeatControls extends StatelessWidget {
@@ -149,20 +194,22 @@ class _RepeatControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             ChoiceChip(
-              label: const Text('None'),
+              label: const Text('Off'),
               selected: recurrence.kind == RecurrenceKind.none,
               onSelected: (_) => onChanged(const Recurrence()),
             ),
             ChoiceChip(
-              label: const Text('Every N days'),
+              label: const Text('Every few days'),
               selected: recurrence.kind == RecurrenceKind.everyNDays,
               onSelected: (_) => onChanged(
                 recurrence.copyWith(
@@ -170,6 +217,7 @@ class _RepeatControls extends StatelessWidget {
                   intervalDays: recurrence.intervalDays < 1
                       ? AppConstants.defaultEveryNDays
                       : recurrence.intervalDays,
+                  clearWeekday: true,
                 ),
               ),
             ),
@@ -186,12 +234,17 @@ class _RepeatControls extends StatelessWidget {
           ],
         ),
         if (recurrence.kind == RecurrenceKind.everyNDays) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          Text(
+            'How often?',
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
-              Text('Every ${recurrence.intervalDays} days'),
-              const Spacer(),
-              IconButton(
+              IconButton.filledTonal(
                 onPressed: recurrence.intervalDays > 1
                     ? () => onChanged(
                           recurrence.copyWith(
@@ -201,7 +254,18 @@ class _RepeatControls extends StatelessWidget {
                     : null,
                 icon: const Icon(Icons.remove_rounded),
               ),
-              IconButton(
+              Expanded(
+                child: Text(
+                  recurrence.intervalDays == 1
+                      ? 'Every day'
+                      : 'Every ${recurrence.intervalDays} days',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton.filledTonal(
                 onPressed: () => onChanged(
                   recurrence.copyWith(
                     intervalDays: recurrence.intervalDays + 1,
@@ -213,7 +277,14 @@ class _RepeatControls extends StatelessWidget {
           ),
         ],
         if (recurrence.kind == RecurrenceKind.weekly) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          Text(
+            'Which day?',
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
