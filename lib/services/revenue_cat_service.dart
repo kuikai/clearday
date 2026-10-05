@@ -72,8 +72,13 @@ class RevenueCatService {
 
   Future<Offering?> getCurrentOffering() async {
     _ensureConfigured();
-    final offerings = await Purchases.getOfferings();
-    return offerings.current;
+    try {
+      final offerings = await Purchases.getOfferings();
+      return offerings.current;
+    } catch (error) {
+      debugPrint('[RevenueCat] Offerings unavailable: $error');
+      return null;
+    }
   }
 
   Package? resolveLifetimePackage(Offering offering) {
@@ -96,18 +101,6 @@ class RevenueCatService {
   Future<CustomerInfo> restorePurchases() {
     _ensureConfigured();
     return Purchases.restorePurchases();
-  }
-
-  Future<CustomerInfo> logOut() {
-    _ensureConfigured();
-    return Purchases.logOut();
-  }
-
-  Future<CustomerInfo> switchToFreshTestUser() async {
-    _ensureConfigured();
-    final freshId = 'test_${DateTime.now().microsecondsSinceEpoch}';
-    final result = await Purchases.logIn(freshId);
-    return result.customerInfo;
   }
 
   void addCustomerInfoListener(CustomerInfoUpdateListener listener) {
@@ -173,11 +166,17 @@ class PurchaseActionNoPurchase extends PurchaseActionResult {
   const PurchaseActionNoPurchase();
 }
 
+const String proUnavailableMessage = 'Pro is not available right now. Try again.';
+
 PurchasesErrorCode? purchasesErrorCodeFrom(Object error) {
-  if (error is PlatformException) {
-    return PurchasesErrorHelper.getErrorCode(error);
+  if (error is! PlatformException) {
+    return null;
   }
-  return null;
+  try {
+    return PurchasesErrorHelper.getErrorCode(error);
+  } catch (_) {
+    return null;
+  }
 }
 
 String userFacingPurchaseError(Object error) {
@@ -185,11 +184,12 @@ String userFacingPurchaseError(Object error) {
   if (code == PurchasesErrorCode.purchaseCancelledError) {
     return 'Purchase cancelled.';
   }
-  if (code == PurchasesErrorCode.networkError) {
+  if (code == PurchasesErrorCode.networkError ||
+      code == PurchasesErrorCode.offlineConnectionError) {
     return 'Network error. Check your connection and try again.';
   }
-  if (code == PurchasesErrorCode.productNotAvailableForPurchaseError) {
-    return 'Product is not available right now.';
+  if (_isUnavailablePurchaseError(code) || _isConfigDump(error)) {
+    return proUnavailableMessage;
   }
   if (error is PlatformException &&
       error.message != null &&
@@ -197,4 +197,21 @@ String userFacingPurchaseError(Object error) {
     return error.message!;
   }
   return 'Something went wrong. Please try again.';
+}
+
+bool _isUnavailablePurchaseError(PurchasesErrorCode? code) {
+  return code == PurchasesErrorCode.configurationError ||
+      code == PurchasesErrorCode.productNotAvailableForPurchaseError ||
+      code == PurchasesErrorCode.storeProblemError;
+}
+
+bool _isConfigDump(Object error) {
+  if (error is! PlatformException) {
+    return false;
+  }
+  final message = error.message?.toLowerCase() ?? '';
+  return message.contains('configuration') ||
+      message.contains('revenuecat') ||
+      message.contains('rev.cat') ||
+      message.contains('app store connect');
 }

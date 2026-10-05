@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-05
+- **Removed** local Pro unlock and reset from Settings, `pro_provider.dart`, and the RevenueCat test-user helpers — Pro comes only from entitlement `pro` or Restore
+- **Updated** paywall offering failures — empty or misconfigured offerings show “Pro is not available right now. Try again.”
+- **Updated** `ios/Runner/Info.plist` — `ITSAppUsesNonExemptEncryption` is false
+
 ## 2026-10-01
 - **Updated** group status styling cleanup — shared due-today colors in `AppColors`, shared rename/copy/delete helpers
 - **Updated** `lib/widgets/group_tile.dart` — groups with overdue tasks show red; groups with tasks due today show yellow

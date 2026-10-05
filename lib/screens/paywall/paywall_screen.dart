@@ -32,7 +32,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(proProvider.notifier).refreshOfferings();
+      _loadOfferings();
+    });
+  }
+
+  Future<void> _loadOfferings() async {
+    final available = await ref.read(proProvider.notifier).refreshOfferings();
+    if (!mounted || available) {
+      return;
+    }
+    setState(() {
+      _errorMessage ??= proUnavailableMessage;
     });
   }
 

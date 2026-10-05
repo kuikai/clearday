@@ -78,17 +78,11 @@ class ProNotifier extends StateNotifier<ProStatus> {
     _syncingPurchase = true;
     try {
       final offering = await _revenueCat.getCurrentOffering();
-      if (offering == null) {
-        return const PurchaseActionFailure(
-          'No offer is available right now. Try again later.',
-        );
-      }
-
-      final package = _revenueCat.resolveLifetimePackage(offering);
+      final package = offering == null
+          ? null
+          : _revenueCat.resolveLifetimePackage(offering);
       if (package == null) {
-        return const PurchaseActionFailure(
-          'Pro product is not available right now.',
-        );
+        return const PurchaseActionFailure(proUnavailableMessage);
       }
 
       final result = await _revenueCat.purchasePackage(package);
@@ -144,48 +138,25 @@ class ProNotifier extends StateNotifier<ProStatus> {
     }
   }
 
-  Future<void> refreshOfferings() async {
+  /// Loads the current price. Returns false when no Pro package is available.
+  Future<bool> refreshOfferings() async {
     if (!_revenueCat.isConfigured) {
-      return;
+      return false;
     }
     try {
       final offering = await _revenueCat.getCurrentOffering();
-      final package =
-          offering == null ? null : _revenueCat.resolveLifetimePackage(offering);
+      final package = offering == null
+          ? null
+          : _revenueCat.resolveLifetimePackage(offering);
       final price = package?.storeProduct.priceString;
-      if (price != null && price.isNotEmpty) {
-        state = state.copyWith(priceString: price);
+      if (package == null || price == null || price.isEmpty) {
+        return false;
       }
-    } catch (_) {}
-  }
-
-  Future<void> unlockProForTesting() async {
-    state = state.copyWith(isPro: true, lastRefreshedAt: DateTime.now());
-    await _storage.saveProStatus(
-      isPro: true,
-      refreshedAt: DateTime.now(),
-    );
-  }
-
-  Future<void> resetProForTesting() async {
-    if (_revenueCat.isConfigured) {
-      _syncingPurchase = true;
-      try {
-        try {
-          await _revenueCat.logOut();
-        } catch (_) {
-          await _revenueCat.switchToFreshTestUser();
-        }
-      } finally {
-        _syncingPurchase = false;
-      }
+      state = state.copyWith(priceString: price);
+      return true;
+    } catch (_) {
+      return false;
     }
-
-    state = state.copyWith(isPro: false, lastRefreshedAt: DateTime.now());
-    await _storage.saveProStatus(
-      isPro: false,
-      refreshedAt: DateTime.now(),
-    );
   }
 
   @override

@@ -2,7 +2,6 @@ import 'package:clearday/models/recurrence.dart';
 import 'package:clearday/models/task.dart';
 import 'package:clearday/models/task_group.dart';
 import 'package:clearday/providers/app_providers.dart';
-import 'package:clearday/providers/pro_provider.dart';
 import 'package:clearday/providers/tasks_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +14,9 @@ import 'fake_revenue_cat_service.dart';
 Future<ProviderContainer> createTestContainer({
   bool isPro = false,
 }) async {
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({
+    if (isPro) 'clearday_is_pro': true,
+  });
   final prefs = await SharedPreferences.getInstance();
 
   final container = ProviderContainer(
@@ -26,10 +27,6 @@ Future<ProviderContainer> createTestContainer({
     ],
   );
   addTearDown(container.dispose);
-
-  if (isPro) {
-    await container.read(proProvider.notifier).unlockProForTesting();
-  }
 
   return container;
 }

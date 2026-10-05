@@ -2,7 +2,9 @@ import 'package:clearday/core/constants/app_constants.dart';
 import 'package:clearday/providers/pro_provider.dart';
 import 'package:clearday/providers/tasks_provider.dart';
 import 'package:clearday/services/revenue_cat_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../helpers/test_harness.dart';
 
@@ -68,15 +70,32 @@ void main() {
       );
     });
 
-    test('resetting Pro restores free limits', () async {
-      final container = await createTestContainer(isPro: true);
-      await addNamedGroup(container, 'Workout');
-      await addNamedGroup(container, 'Work');
+    test('configuration errors stay user-facing', () {
+      const dump = 'There is an issue with your configuration. None of the '
+          'products registered in the RevenueCat dashboard could be fetched '
+          'from App Store Connect. https://rev.cat/why-are-offerings-empty';
+      final error = PlatformException(
+        code: '${PurchasesErrorCode.configurationError.index}',
+        message: dump,
+      );
 
-      await container.read(proProvider.notifier).resetProForTesting();
+      final message = userFacingPurchaseError(error);
 
-      expect(container.read(proProvider).isPro, isFalse);
-      expect(appNotifier(container).canAddGroup, isFalse);
+      expect(message, proUnavailableMessage);
+      expect(message.contains('rev.cat'), isFalse);
+      expect(message.contains('configuration'), isFalse);
+    });
+
+    test('non-numeric store errors do not throw a config dump', () {
+      final error = PlatformException(
+        code: 'CONFIGURATION_ERROR',
+        message: 'There is an issue with your configuration. '
+            'https://rev.cat/why-are-offerings-empty',
+      );
+
+      final message = userFacingPurchaseError(error);
+
+      expect(message, proUnavailableMessage);
     });
   });
 }
