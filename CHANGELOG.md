@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-01
+- **Updated** group status styling cleanup — shared due-today colors in `AppColors`, shared rename/copy/delete helpers
+- **Updated** `lib/widgets/group_tile.dart` — groups with overdue tasks show red; groups with tasks due today show yellow
+- **Added** `AppData.dueTodayCountFor` — incomplete tasks due today in a group
+- **Fixed** recurring complete — next due is always from today + interval (not from previous due), so toggling done same day no longer stacks days
+
 ## 2026-09-28
 - **Updated** recurring tasks — completing keeps the same task done and moves its due date; it reopens when that day arrives (no duplicate task)
 - **Fixed** recurring overdue complete — next due counts from now so the task does not reopen immediately

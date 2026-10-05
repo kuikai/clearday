@@ -4,6 +4,17 @@ import '../core/constants/app_constants.dart';
 import '../models/recurrence.dart';
 import 'pro_badge.dart';
 
+const _weekdayShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const _weekdayLong = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
 class EditorSectionCard extends StatelessWidget {
   const EditorSectionCard({
     super.key,
@@ -169,18 +180,7 @@ class RecurrenceCard extends StatelessWidget {
     }
   }
 
-  String _weekdayWord(int weekday) {
-    const labels = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-    return labels[weekday - 1];
-  }
+  String _weekdayWord(int weekday) => _weekdayLong[weekday - 1];
 }
 
 class _RepeatControls extends StatelessWidget {
@@ -304,8 +304,5 @@ class _RepeatControls extends StatelessWidget {
     );
   }
 
-  String _weekdayLabel(int weekday) {
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return labels[weekday - 1];
-  }
+  String _weekdayLabel(int weekday) => _weekdayShort[weekday - 1];
 }

@@ -5,6 +5,7 @@ import '../../models/task.dart';
 import '../../models/task_group.dart';
 import '../../providers/tasks_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/group_actions.dart';
 import '../../widgets/group_name_dialog.dart';
 import '../../widgets/group_tile.dart';
 import '../../widgets/section_header.dart';
@@ -103,6 +104,7 @@ class GroupTasksScreen extends ConsumerWidget {
                 isSubgroup: true,
                 activeCount: data.activeCountFor(subgroup.id),
                 overdueCount: data.overdueCountFor(subgroup.id, now),
+                dueTodayCount: data.dueTodayCountFor(subgroup.id, now),
                 onOpen: () => _openGroup(context, ref, subgroup),
                 onAddSubgroup: () =>
                     _addSubgroupUnder(context, ref, subgroup.id),
@@ -174,43 +176,35 @@ class GroupTasksScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     TaskGroup group,
-  ) async {
-    final name = await promptGroupName(
+  ) {
+    return renameGroupAction(
       context,
-      title: group.isTopLevel ? 'Rename group' : 'Rename subgroup',
-      initial: group.name,
+      ref,
+      group.id,
+      currentName: group.name,
+      dialogTitle: group.isTopLevel ? 'Rename group' : 'Rename subgroup',
     );
-    if (name == null) {
-      return;
-    }
-    await ref.read(appDataProvider.notifier).renameGroup(group.id, name);
   }
 
   Future<void> _copyGroup(
     BuildContext context,
     WidgetRef ref,
     TaskGroup group,
-  ) async {
-    final result =
-        await ref.read(appDataProvider.notifier).copyGroup(group.id);
-    if (!context.mounted) {
-      return;
-    }
-    if (result == SaveTaskResult.blockedByGroupLimit ||
-        result == SaveTaskResult.blockedByTaskLimit) {
-      await showPaywall(context);
-    }
+  ) {
+    return copyGroupAction(context, ref, group.id);
   }
 
   Future<void> _deleteGroup(
     BuildContext context,
     WidgetRef ref,
     TaskGroup group,
-  ) async {
-    final confirmed = await confirmDeleteGroup(context, group.name);
-    if (confirmed) {
-      await ref.read(appDataProvider.notifier).deleteGroup(group.id);
-    }
+  ) {
+    return deleteGroupAction(
+      context,
+      ref,
+      group.id,
+      name: group.name,
+    );
   }
 
   Future<void> _addTask(BuildContext context, WidgetRef ref) async {

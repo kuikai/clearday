@@ -328,13 +328,21 @@ class AppDataNotifier extends StateNotifier<AppData> {
   /// Marks the task done and moves its due date to the next occurrence.
   /// It stays done until that date arrives, then [_reactivateRecurringTasks]
   /// opens it again — no second task is created.
+  ///
+  /// Next due is always counted from *today* (completion), never from the
+  /// previous due date. That way toggling done on/off the same day does not
+  /// keep pushing the due date further out.
   Future<void> _completeRecurringTask(Task task) async {
     final now = DateTime.now();
-    // Count from "now" if the task was overdue, so the next due is always
-    // in the future and the task stays done until then.
-    final base = task.dueAt == null
-        ? now
-        : (task.dueAt!.isAfter(now) ? task.dueAt! : now);
+    final base = task.dueHasTime && task.dueAt != null
+        ? DateTime(
+            now.year,
+            now.month,
+            now.day,
+            task.dueAt!.hour,
+            task.dueAt!.minute,
+          )
+        : DateTime(now.year, now.month, now.day, 9);
     final nextDue = task.recurrence.nextDueAfter(base);
     final offset = task.dueAt != null && task.reminderAt != null
         ? task.dueAt!.difference(task.reminderAt!)

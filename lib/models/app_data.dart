@@ -112,6 +112,17 @@ class AppData {
     }).length;
   }
 
+  int dueTodayCountFor(String groupId, DateTime now) {
+    final ids = descendantGroupIds(groupId);
+    return tasks.where((task) {
+      final due = task.dueAt;
+      return ids.contains(task.groupId) &&
+          !task.isCompleted &&
+          due != null &&
+          isSameDay(due, now);
+    }).length;
+  }
+
   /// Tasks due today across every group (includes completed, so they stay visible).
   List<Task> todaysTasks(DateTime now) {
     final result = tasks.where((task) {

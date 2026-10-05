@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
 import '../models/task_group.dart';
 
 class GroupTile extends StatelessWidget {
@@ -8,6 +9,7 @@ class GroupTile extends StatelessWidget {
     required this.group,
     required this.activeCount,
     required this.overdueCount,
+    required this.dueTodayCount,
     required this.onOpen,
     required this.onRename,
     required this.onCopy,
@@ -19,6 +21,7 @@ class GroupTile extends StatelessWidget {
   final TaskGroup group;
   final int activeCount;
   final int overdueCount;
+  final int dueTodayCount;
   final VoidCallback onOpen;
   final VoidCallback onRename;
   final VoidCallback onCopy;
@@ -30,11 +33,20 @@ class GroupTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final status = _GroupStatus.fromCounts(
+      overdueCount: overdueCount,
+      dueTodayCount: dueTodayCount,
+      colorScheme: colorScheme,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Card(
         clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: status.border),
+        ),
         child: InkWell(
           onTap: onOpen,
           onLongPress: onRename,
@@ -46,14 +58,14 @@ class GroupTile extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withValues(alpha: 0.7),
+                    color: status.iconBackground,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
                     isSubgroup
                         ? Icons.folder_copy_outlined
                         : Icons.folder_outlined,
-                    color: colorScheme.onPrimaryContainer,
+                    color: status.iconForeground,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -67,6 +79,7 @@ class GroupTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
+                          color: status.titleColor,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -79,12 +92,19 @@ class GroupTile extends StatelessWidget {
                                 ? '1 active task'
                                 : '$activeCount active tasks',
                           ),
-                          if (overdueCount > 0)
+                          if (status.isOverdue)
                             _MetaChip(
                               label: overdueCount == 1
                                   ? '1 overdue'
                                   : '$overdueCount overdue',
-                              warning: true,
+                              kind: _ChipKind.overdue,
+                            ),
+                          if (status.isDueToday)
+                            _MetaChip(
+                              label: dueTodayCount == 1
+                                  ? '1 due today'
+                                  : '$dueTodayCount due today',
+                              kind: _ChipKind.dueToday,
                             ),
                         ],
                       ),
@@ -99,17 +119,15 @@ class GroupTile extends StatelessWidget {
                     minHeight: 48,
                   ),
                   onSelected: (value) {
-                    if (value == 'subgroup') {
-                      onAddSubgroup?.call();
-                    }
-                    if (value == 'rename') {
-                      onRename();
-                    }
-                    if (value == 'copy') {
-                      onCopy();
-                    }
-                    if (value == 'delete') {
-                      onDelete();
+                    switch (value) {
+                      case 'subgroup':
+                        onAddSubgroup?.call();
+                      case 'rename':
+                        onRename();
+                      case 'copy':
+                        onCopy();
+                      case 'delete':
+                        onDelete();
                     }
                   },
                   itemBuilder: (context) => [
@@ -141,24 +159,87 @@ class GroupTile extends StatelessWidget {
   }
 }
 
+class _GroupStatus {
+  const _GroupStatus({
+    required this.border,
+    required this.iconBackground,
+    required this.iconForeground,
+    required this.titleColor,
+    required this.isOverdue,
+    required this.isDueToday,
+  });
+
+  final Color border;
+  final Color iconBackground;
+  final Color iconForeground;
+  final Color? titleColor;
+  final bool isOverdue;
+  final bool isDueToday;
+
+  factory _GroupStatus.fromCounts({
+    required int overdueCount,
+    required int dueTodayCount,
+    required ColorScheme colorScheme,
+  }) {
+    if (overdueCount > 0) {
+      return _GroupStatus(
+        border: colorScheme.error.withValues(alpha: 0.55),
+        iconBackground: colorScheme.errorContainer.withValues(alpha: 0.85),
+        iconForeground: colorScheme.onErrorContainer,
+        titleColor: colorScheme.error,
+        isOverdue: true,
+        isDueToday: false,
+      );
+    }
+    if (dueTodayCount > 0) {
+      return _GroupStatus(
+        border: AppColors.dueToday.withValues(alpha: 0.55),
+        iconBackground: AppColors.dueTodayContainer,
+        iconForeground: AppColors.onDueTodayContainer,
+        titleColor: AppColors.dueToday,
+        isOverdue: false,
+        isDueToday: true,
+      );
+    }
+    return _GroupStatus(
+      border: colorScheme.outlineVariant.withValues(alpha: 0.9),
+      iconBackground: colorScheme.primaryContainer.withValues(alpha: 0.7),
+      iconForeground: colorScheme.onPrimaryContainer,
+      titleColor: null,
+      isOverdue: false,
+      isDueToday: false,
+    );
+  }
+}
+
+enum _ChipKind { normal, overdue, dueToday }
+
 class _MetaChip extends StatelessWidget {
   const _MetaChip({
     required this.label,
-    this.warning = false,
+    this.kind = _ChipKind.normal,
   });
 
   final String label;
-  final bool warning;
+  final _ChipKind kind;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final background = warning
-        ? colorScheme.errorContainer
-        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.7);
-    final foreground = warning
-        ? colorScheme.onErrorContainer
-        : colorScheme.onSurface.withValues(alpha: 0.7);
+    final (background, foreground) = switch (kind) {
+      _ChipKind.overdue => (
+          colorScheme.errorContainer,
+          colorScheme.onErrorContainer,
+        ),
+      _ChipKind.dueToday => (
+          AppColors.dueTodayContainer,
+          AppColors.onDueTodayContainer,
+        ),
+      _ChipKind.normal => (
+          colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+          colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

@@ -8,6 +8,7 @@ import '../../models/task.dart';
 import '../../models/task_group.dart';
 import '../../providers/tasks_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/group_actions.dart';
 import '../../widgets/group_name_dialog.dart';
 import '../../widgets/group_tile.dart';
 import '../../widgets/limit_banner.dart';
@@ -203,6 +204,7 @@ class HomeScreen extends ConsumerWidget {
             group: group,
             activeCount: data.activeCountFor(group.id),
             overdueCount: data.overdueCountFor(group.id, now),
+            dueTodayCount: data.dueTodayCountFor(group.id, now),
             onOpen: () => _openGroup(context, ref, group),
             onAddSubgroup: () => _addSubgroup(context, ref, group.id),
             onRename: () => _renameGroup(context, ref, group),
@@ -367,43 +369,35 @@ class HomeScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     TaskGroup group,
-  ) async {
-    final name = await promptGroupName(
+  ) {
+    return renameGroupAction(
       context,
-      title: 'Rename group',
-      initial: group.name,
+      ref,
+      group.id,
+      currentName: group.name,
+      dialogTitle: 'Rename group',
     );
-    if (name == null) {
-      return;
-    }
-    await ref.read(appDataProvider.notifier).renameGroup(group.id, name);
   }
 
   Future<void> _copyGroup(
     BuildContext context,
     WidgetRef ref,
     TaskGroup group,
-  ) async {
-    final result =
-        await ref.read(appDataProvider.notifier).copyGroup(group.id);
-    if (!context.mounted) {
-      return;
-    }
-    if (result == SaveTaskResult.blockedByGroupLimit ||
-        result == SaveTaskResult.blockedByTaskLimit) {
-      await showPaywall(context);
-    }
+  ) {
+    return copyGroupAction(context, ref, group.id);
   }
 
   Future<void> _deleteGroup(
     BuildContext context,
     WidgetRef ref,
     TaskGroup group,
-  ) async {
-    final confirmed = await confirmDeleteGroup(context, group.name);
-    if (confirmed) {
-      await ref.read(appDataProvider.notifier).deleteGroup(group.id);
-    }
+  ) {
+    return deleteGroupAction(
+      context,
+      ref,
+      group.id,
+      name: group.name,
+    );
   }
 }
 

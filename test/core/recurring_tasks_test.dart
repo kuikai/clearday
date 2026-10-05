@@ -11,8 +11,8 @@ void main() {
     test('Pro: completing a recurring task keeps one task done until next due',
         () async {
       final container = await createTestContainer(isPro: true);
-      final due = DateTime.now().add(const Duration(days: 1));
-      final dueDay = DateTime(due.year, due.month, due.day, 9);
+      final now = DateTime.now();
+      final dueDay = DateTime(now.year, now.month, now.day, 9);
 
       await addNamedTask(
         container,
@@ -35,8 +35,39 @@ void main() {
       final task = tasks.single;
       expect(task.isCompleted, isTrue);
       expect(task.title, 'Water plants');
+      // From completion day (today), not from any future stored due.
       expect(task.dueAt, dueDay.add(const Duration(days: 5)));
       expect(task.recurrence.kind, RecurrenceKind.everyNDays);
+    });
+
+    test('Pro: completing twice the same day does not keep adding interval days',
+        () async {
+      final container = await createTestContainer(isPro: true);
+      final now = DateTime.now();
+      final dueDay = DateTime(now.year, now.month, now.day, 9);
+
+      await addNamedTask(
+        container,
+        title: 'Daily chore',
+        dueAt: dueDay,
+        dueHasTime: true,
+        recurrence: const Recurrence(
+          kind: RecurrenceKind.everyNDays,
+          intervalDays: 1,
+        ),
+      );
+
+      final taskId = taskNamed(container, 'Daily chore').id;
+      await appNotifier(container).toggleCompleted(taskId);
+      final firstDue = taskNamed(container, 'Daily chore').dueAt;
+
+      // Uncheck then complete again the same day.
+      await appNotifier(container).toggleCompleted(taskId);
+      await appNotifier(container).toggleCompleted(taskId);
+      final secondDue = taskNamed(container, 'Daily chore').dueAt;
+
+      expect(firstDue, dueDay.add(const Duration(days: 1)));
+      expect(secondDue, firstDue);
     });
 
     test('Pro: reactivation opens the same task when next due arrives',
