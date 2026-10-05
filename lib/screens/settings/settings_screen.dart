@@ -129,28 +129,6 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  title: const Text('Unlock Pro on this iPhone'),
-                  subtitle: const Text(
-                    'Temporary until App Store purchase is wired',
-                  ),
-                  onTap: () {
-                    ref.read(proProvider.notifier).unlockProForTesting();
-                  },
-                ),
-                ListTile(
-                  title: const Text('Reset Pro on this iPhone'),
-                  onTap: () {
-                    ref.read(proProvider.notifier).resetProForTesting();
-                  },
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 24),
           Text(
             AppConstants.appTagline,
