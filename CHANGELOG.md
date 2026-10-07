@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-07
+- **Updated** iOS target — iPhone only, so App Store review no longer requires a 13-inch iPad screenshot
+
 ## 2026-10-05
 - **Removed** local Pro unlock and reset from Settings, `pro_provider.dart`, and the RevenueCat test-user helpers — Pro comes only from entitlement `pro` or Restore
 - **Updated** paywall offering failures — empty or misconfigured offerings show “Pro is not available right now. Try again.”
