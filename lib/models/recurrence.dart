@@ -5,33 +5,63 @@ class Recurrence {
   const Recurrence({
     this.kind = RecurrenceKind.none,
     this.intervalDays = 5,
-    this.weekday,
+    this.weekdays = const [],
   });
 
   final RecurrenceKind kind;
   final int intervalDays;
-  final int? weekday;
+
+  /// Weekdays this task repeats on. 1 = Monday … 7 = Sunday.
+  final List<int> weekdays;
 
   bool get isEnabled => kind != RecurrenceKind.none;
+
+  /// Selected weekdays in Monday-to-Sunday order, with invalid values dropped.
+  List<int> get selectedWeekdays {
+    final days = <int>{
+      for (final day in weekdays)
+        if (day >= DateTime.monday && day <= DateTime.sunday) day,
+    }.toList()
+      ..sort();
+    return days;
+  }
 
   Recurrence copyWith({
     RecurrenceKind? kind,
     int? intervalDays,
-    int? weekday,
-    bool clearWeekday = false,
+    List<int>? weekdays,
+    bool clearWeekdays = false,
   }) {
     return Recurrence(
       kind: kind ?? this.kind,
       intervalDays: intervalDays ?? this.intervalDays,
-      weekday: clearWeekday ? null : (weekday ?? this.weekday),
+      weekdays: clearWeekdays ? const [] : (weekdays ?? this.weekdays),
     );
+  }
+
+  /// Adds or removes [weekday]. The last selected day stays selected.
+  Recurrence toggleWeekday(int weekday) {
+    if (weekday < DateTime.monday || weekday > DateTime.sunday) {
+      return this;
+    }
+    final days = selectedWeekdays.toSet();
+    if (days.contains(weekday)) {
+      if (days.length <= 1) {
+        return this;
+      }
+      days.remove(weekday);
+    } else {
+      days.add(weekday);
+    }
+    final next = days.toList()..sort();
+    return copyWith(weekdays: next);
   }
 
   Map<String, dynamic> toJson() {
     return {
       'kind': kind.name,
       'intervalDays': intervalDays,
-      'weekday': weekday,
+      'weekdays': selectedWeekdays,
     };
   }
 
@@ -42,7 +72,7 @@ class Recurrence {
         orElse: () => RecurrenceKind.none,
       ),
       intervalDays: json['intervalDays'] as int? ?? 5,
-      weekday: json['weekday'] as int?,
+      weekdays: _weekdaysFromJson(json),
     );
   }
 
@@ -54,21 +84,50 @@ class Recurrence {
       case RecurrenceKind.everyNDays:
         return from.add(Duration(days: intervalDays < 1 ? 1 : intervalDays));
       case RecurrenceKind.weekly:
-        return _nextWeekday(from, weekday ?? from.weekday);
+        return _nextSelectedWeekday(from);
     }
   }
 
-  DateTime _nextWeekday(DateTime from, int targetWeekday) {
+  /// First selected weekday after [from], keeping the same time of day.
+  /// Starts tomorrow so finishing a task does not schedule that same day again.
+  DateTime _nextSelectedWeekday(DateTime from) {
+    final targets = selectedWeekdays;
+    if (targets.isEmpty) {
+      return _atSameTime(from.add(const Duration(days: 7)), from);
+    }
     var cursor = from.add(const Duration(days: 1));
-    while (cursor.weekday != targetWeekday) {
+    for (var step = 0; step < 7; step++) {
+      if (targets.contains(cursor.weekday)) {
+        return _atSameTime(cursor, from);
+      }
       cursor = cursor.add(const Duration(days: 1));
     }
-    return DateTime(
-      cursor.year,
-      cursor.month,
-      cursor.day,
-      from.hour,
-      from.minute,
-    );
+    return _atSameTime(from.add(const Duration(days: 7)), from);
   }
+
+  DateTime _atSameTime(DateTime day, DateTime from) {
+    return DateTime(day.year, day.month, day.day, from.hour, from.minute);
+  }
+}
+
+List<int> _weekdaysFromJson(Map<String, dynamic> json) {
+  final rawDays = json['weekdays'];
+  if (rawDays is List && rawDays.isNotEmpty) {
+    return [
+      for (final day in rawDays)
+        if (day is int)
+          day
+        else if (day is num)
+          day.toInt(),
+    ];
+  }
+  // Older saves stored a single weekday.
+  final legacy = json['weekday'];
+  if (legacy is int) {
+    return [legacy];
+  }
+  if (legacy is num) {
+    return [legacy.toInt()];
+  }
+  return const [];
 }

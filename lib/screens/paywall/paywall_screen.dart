@@ -179,7 +179,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   const _BenefitRow(
                     icon: Icons.repeat_rounded,
                     title: 'Recurring tasks',
-                    subtitle: 'Every 5 days, weekly, or your own interval',
+                    subtitle: 'Every few days, or several days each week',
                   ),
                   const _BenefitRow(
                     icon: Icons.notifications_active_outlined,

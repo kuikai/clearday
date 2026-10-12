@@ -175,12 +175,21 @@ class RecurrenceCard extends StatelessWidget {
             ? 'After you finish it, it comes back tomorrow.'
             : 'After you finish it, it comes back in $days days.';
       case RecurrenceKind.weekly:
-        return 'After you finish it, it comes back next '
-            '${_weekdayWord(recurrence.weekday ?? DateTime.now().weekday)}.';
+        return _weeklyHelper(recurrence.selectedWeekdays);
     }
   }
 
-  String _weekdayWord(int weekday) => _weekdayLong[weekday - 1];
+  String _weeklyHelper(List<int> weekdays) {
+    final days = weekdays.isEmpty ? [DateTime.now().weekday] : weekdays;
+    final names = [for (final day in days) _weekdayLong[day - 1]];
+    if (names.length == 1) {
+      return 'After you finish it, it comes back next ${names.single}.';
+    }
+    final listed = names.length == 2
+        ? '${names[0]} or ${names[1]}'
+        : '${names.sublist(0, names.length - 1).join(', ')}, or ${names.last}';
+    return 'After you finish it, it comes back the next $listed.';
+  }
 }
 
 class _RepeatControls extends StatelessWidget {
@@ -217,7 +226,7 @@ class _RepeatControls extends StatelessWidget {
                   intervalDays: recurrence.intervalDays < 1
                       ? AppConstants.defaultEveryNDays
                       : recurrence.intervalDays,
-                  clearWeekday: true,
+                  clearWeekdays: true,
                 ),
               ),
             ),
@@ -227,7 +236,9 @@ class _RepeatControls extends StatelessWidget {
               onSelected: (_) => onChanged(
                 recurrence.copyWith(
                   kind: RecurrenceKind.weekly,
-                  weekday: recurrence.weekday ?? DateTime.now().weekday,
+                  weekdays: recurrence.selectedWeekdays.isEmpty
+                      ? [DateTime.now().weekday]
+                      : recurrence.selectedWeekdays,
                 ),
               ),
             ),
@@ -279,30 +290,113 @@ class _RepeatControls extends StatelessWidget {
         if (recurrence.kind == RecurrenceKind.weekly) ...[
           const SizedBox(height: 16),
           Text(
-            'Which day?',
+            'Which days?',
             style: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (var weekday = 1; weekday <= 7; weekday++)
-                ChoiceChip(
-                  label: Text(_weekdayLabel(weekday)),
-                  selected: recurrence.weekday == weekday,
-                  onSelected: (_) => onChanged(
-                    recurrence.copyWith(weekday: weekday),
-                  ),
-                ),
-            ],
+          _WeekdayToggles(
+            selected: recurrence.selectedWeekdays,
+            onToggle: (weekday) => onChanged(
+              recurrence.toggleWeekday(weekday),
+            ),
           ),
         ],
       ],
     );
   }
+}
 
-  String _weekdayLabel(int weekday) => _weekdayShort[weekday - 1];
+class _WeekdayToggles extends StatelessWidget {
+  const _WeekdayToggles({
+    required this.selected,
+    required this.onToggle,
+  });
+
+  final List<int> selected;
+  final ValueChanged<int> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (var weekday = DateTime.monday;
+            weekday <= DateTime.sunday;
+            weekday++)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: weekday == DateTime.monday ? 0 : 4,
+              ),
+              child: _WeekdayToggle(
+                label: _weekdayShort[weekday - 1],
+                fullName: _weekdayLong[weekday - 1],
+                selected: selected.contains(weekday),
+                onPressed: () => onToggle(weekday),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _WeekdayToggle extends StatelessWidget {
+  const _WeekdayToggle({
+    required this.label,
+    required this.fullName,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String fullName;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final background = selected ? colorScheme.primary : Colors.transparent;
+    final foreground = selected ? colorScheme.onPrimary : colorScheme.onSurface;
+    final borderColor = selected ? colorScheme.primary : colorScheme.outline;
+
+    return Tooltip(
+      message: selected ? '$fullName on' : '$fullName off',
+      child: Semantics(
+        button: true,
+        toggled: selected,
+        label: fullName,
+        child: Material(
+          color: background,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: borderColor),
+          ),
+          child: InkWell(
+            customBorder: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onTap: onPressed,
+            child: SizedBox(
+              height: 48,
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: foreground,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

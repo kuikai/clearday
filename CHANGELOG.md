@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-12
+- **Updated** weekly repeat — a task can repeat on more than one weekday, and older saves with a single weekday still load
+- **Updated** weekly day picker — each weekday is an on/off button
+
 ## 2026-10-07
 - **Updated** iOS target — iPhone only, so App Store review no longer requires a 13-inch iPad screenshot
 
