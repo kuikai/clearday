@@ -16,6 +16,35 @@ bool isAfterToday(DateTime value, DateTime now) {
   return dateOnly(value).isAfter(dateOnly(now));
 }
 
+/// True when [value] is after today and on or before [now] plus [days].
+/// With [days] 2, that is tomorrow and the day after tomorrow.
+bool isUpcomingWithinDays(DateTime value, DateTime now, {int days = 2}) {
+  final dueDay = dateOnly(value);
+  final today = dateOnly(now);
+  final lastDay = today.add(Duration(days: days));
+  return dueDay.isAfter(today) && !dueDay.isAfter(lastDay);
+}
+
+/// Date-only value guaranteed to sit between [firstDate] and [lastDate].
+/// [showDatePicker] asserts if [initialDate] is outside that range.
+DateTime clampToDateRange(
+  DateTime? preferred, {
+  required DateTime firstDate,
+  required DateTime lastDate,
+  required DateTime now,
+}) {
+  var initial = dateOnly(preferred ?? now);
+  final first = dateOnly(firstDate);
+  final last = dateOnly(lastDate);
+  if (initial.isBefore(first)) {
+    return first;
+  }
+  if (initial.isAfter(last)) {
+    return last;
+  }
+  return initial;
+}
+
 String formatDueLabel(DateTime dueAt, {required bool hasTime}) {
   final date = DateFormat.MMMd().format(dueAt);
   if (!hasTime) {

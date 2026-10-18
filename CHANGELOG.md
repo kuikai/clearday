@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-14
+- **Updated** home **Upcoming** — always shown under Due today; lists incomplete tasks due after today
+- **Added** `AppData.upcomingSoonTasks` and `isUpcomingWithinDays` for the two-day window
+- **Fixed** duplicate FAB hero tags — opening a task from a group no longer crashes
+- **Fixed** due/reminder date picker — old overdue dates are clamped so the picker cannot assert
+- **Fixed** saved data load — skip bad tasks/groups instead of wiping the whole save
+- **Fixed** reminder sync — wait for the previous pass so overlapping native calls cannot pile up
+
 ## 2026-10-12
 - **Updated** weekly repeat — a task can repeat on more than one weekday, and older saves with a single weekday still load
 - **Updated** weekly day picker — each weekday is an on/off button

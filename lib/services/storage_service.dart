@@ -20,7 +20,12 @@ class StorageService {
   static const _isProKey = 'clearday_is_pro';
   static const _proRefreshedAtKey = 'clearday_pro_refreshed_at';
 
+  /// True when the last [loadAppData] found bytes that could not be parsed.
+  /// In that case the in-memory seed must not be written over the save.
+  bool loadCorrupt = false;
+
   AppData loadAppData() {
+    loadCorrupt = false;
     final raw = _prefs.getString(_dataKey);
     if (raw == null || raw.isEmpty) {
       return seedAppData();
@@ -30,6 +35,7 @@ class StorageService {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
       return AppData.fromJson(decoded);
     } catch (_) {
+      loadCorrupt = true;
       return seedAppData();
     }
   }

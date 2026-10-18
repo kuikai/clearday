@@ -60,6 +60,7 @@ class GroupTasksScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'group_add_task',
         onPressed: () => _addTask(context, ref),
         tooltip: 'Add task',
         icon: const Icon(Icons.add_rounded),

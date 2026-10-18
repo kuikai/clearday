@@ -80,6 +80,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'task_editor_save',
         onPressed: _saving ? null : _save,
         tooltip: 'Save task',
         icon: const Icon(Icons.check_rounded),
@@ -230,13 +231,20 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
   Future<void> _pickDueDate() async {
     final now = DateTime.now();
+    final firstDate = DateTime(now.year - 10, 1, 1);
+    final lastDate = DateTime(now.year + 10, 12, 31);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dueAt ?? now,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 5),
+      initialDate: clampToDateRange(
+        _dueAt,
+        firstDate: firstDate,
+        lastDate: lastDate,
+        now: now,
+      ),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
-    if (picked == null) {
+    if (picked == null || !mounted) {
       return;
     }
     setState(() {
@@ -272,7 +280,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         ? TimeOfDay.fromDateTime(_dueAt!)
         : const TimeOfDay(hour: 9, minute: 0);
     final picked = await showTimePicker(context: context, initialTime: initial);
-    if (picked == null || _dueAt == null) {
+    if (picked == null || _dueAt == null || !mounted) {
       return;
     }
     setState(() {
@@ -290,11 +298,18 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
   Future<void> _pickReminder() async {
     final now = DateTime.now();
+    final firstDate = DateTime(now.year - 10, 1, 1);
+    final lastDate = DateTime(now.year + 10, 12, 31);
     final date = await showDatePicker(
       context: context,
-      initialDate: _reminderAt ?? _dueAt ?? now,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 5),
+      initialDate: clampToDateRange(
+        _reminderAt ?? _dueAt,
+        firstDate: firstDate,
+        lastDate: lastDate,
+        now: now,
+      ),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (date == null || !mounted) {
       return;

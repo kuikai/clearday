@@ -50,6 +50,31 @@ void main() {
     );
   });
 
+  test('fromJson clamps huge or fractional interval days', () {
+    expect(
+      Recurrence.fromJson({
+        'kind': 'everyNDays',
+        'intervalDays': 5.0,
+      }).intervalDays,
+      5,
+    );
+    expect(
+      Recurrence.fromJson({
+        'kind': 'everyNDays',
+        'intervalDays': 999999,
+      }).intervalDays,
+      3650,
+    );
+    const huge = Recurrence(
+      kind: RecurrenceKind.everyNDays,
+      intervalDays: 999999,
+    );
+    expect(
+      huge.nextDueAfter(DateTime(2026, 8, 17)),
+      DateTime(2026, 8, 17).add(const Duration(days: 3650)),
+    );
+  });
+
   test('fromJson still reads a single saved weekday', () {
     final recurrence = Recurrence.fromJson({
       'kind': 'weekly',

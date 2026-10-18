@@ -39,7 +39,8 @@ class TaskGroup {
     return TaskGroup(
       id: json['id'] as String,
       name: json['name'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       parentId: json['parentId'] as String?,
     );
   }

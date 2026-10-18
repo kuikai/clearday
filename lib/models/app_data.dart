@@ -68,10 +68,14 @@ class AppData {
 
   List<TaskGroup> groupsForPicker() {
     final result = <TaskGroup>[];
+    final seen = <String>{};
     void addBranch(String? parentId) {
       final children =
           parentId == null ? topLevelGroups : subgroupsOf(parentId);
       for (final child in children) {
+        if (!seen.add(child.id)) {
+          continue;
+        }
         result.add(child);
         addBranch(child.id);
       }
@@ -152,6 +156,23 @@ class AppData {
     return result;
   }
 
+  /// Incomplete tasks due after today, soonest first.
+  /// Tomorrow and the next day stay at the top of the list.
+  List<Task> upcomingSoonTasks(DateTime now) {
+    final result = tasks.where((task) {
+      final due = task.dueAt;
+      return !task.isCompleted && due != null && isAfterToday(due, now);
+    }).toList();
+    result.sort((a, b) {
+      final dueCmp = a.dueAt!.compareTo(b.dueAt!);
+      if (dueCmp != 0) {
+        return dueCmp;
+      }
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    return result;
+  }
+
   AppData copyWith({
     List<TaskGroup>? groups,
     List<Task>? tasks,
@@ -176,14 +197,8 @@ class AppData {
     final rawGroups = json['groups'] as List<dynamic>? ??
         json['lists'] as List<dynamic>? ??
         [];
-    final groups = rawGroups
-        .map(
-          (item) => TaskGroup.fromJson(Map<String, dynamic>.from(item as Map)),
-        )
-        .toList();
-    final tasks = (json['tasks'] as List<dynamic>? ?? [])
-        .map((item) => Task.fromJson(Map<String, dynamic>.from(item as Map)))
-        .toList();
+    final groups = _parseGroups(rawGroups);
+    final tasks = _parseTasks(json['tasks'] as List<dynamic>? ?? []);
 
     return AppData(
       groups: groups,
@@ -192,5 +207,45 @@ class AppData {
           json['selectedListId'] as String? ??
           (groups.isNotEmpty ? groups.first.id : ''),
     );
+  }
+
+  static List<TaskGroup> _parseGroups(List<dynamic> rawGroups) {
+    final groups = <TaskGroup>[];
+    for (final item in rawGroups) {
+      if (item is! Map) {
+        continue;
+      }
+      try {
+        groups.add(TaskGroup.fromJson(Map<String, dynamic>.from(item)));
+      } catch (_) {}
+    }
+    return _sanitizeGroupParents(groups);
+  }
+
+  static List<Task> _parseTasks(List<dynamic> rawTasks) {
+    final tasks = <Task>[];
+    for (final item in rawTasks) {
+      if (item is! Map) {
+        continue;
+      }
+      try {
+        tasks.add(Task.fromJson(Map<String, dynamic>.from(item)));
+      } catch (_) {}
+    }
+    return tasks;
+  }
+
+  /// Drops self-parents and links to groups that are not in the save.
+  static List<TaskGroup> _sanitizeGroupParents(List<TaskGroup> groups) {
+    final ids = {for (final group in groups) group.id};
+    return [
+      for (final group in groups)
+        if (group.parentId == null)
+          group
+        else if (group.parentId == group.id || !ids.contains(group.parentId))
+          group.copyWith(clearParentId: true)
+        else
+          group,
+    ];
   }
 }

@@ -84,16 +84,26 @@ class Task {
       reminderAt: _parseDate(json['reminderAt']),
       isCompleted: json['isCompleted'] as bool? ?? false,
       completedAt: _parseDate(json['completedAt']),
-      recurrence: json['recurrence'] is Map<String, dynamic>
-          ? Recurrence.fromJson(json['recurrence'] as Map<String, dynamic>)
-          : const Recurrence(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      recurrence: _recurrenceFromJson(json['recurrence']),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
+  }
+
+  static Recurrence _recurrenceFromJson(Object? value) {
+    if (value is! Map) {
+      return const Recurrence();
+    }
+    try {
+      return Recurrence.fromJson(Map<String, dynamic>.from(value));
+    } catch (_) {
+      return const Recurrence();
+    }
   }
 
   static DateTime? _parseDate(Object? value) {
     if (value is String && value.isNotEmpty) {
-      return DateTime.parse(value);
+      return DateTime.tryParse(value);
     }
     return null;
   }

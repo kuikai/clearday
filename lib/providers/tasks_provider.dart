@@ -34,7 +34,9 @@ final groupsProvider = Provider<List<TaskGroup>>((ref) {
 class AppDataNotifier extends StateNotifier<AppData> {
   AppDataNotifier(this._storage, this._notifications, this._ref)
       : super(_storage.loadAppData()) {
-    _persist();
+    if (!_storage.loadCorrupt) {
+      _persist();
+    }
     Future.microtask(_reactivateRecurringTasks);
     _syncReminders();
   }
@@ -43,6 +45,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
   final NotificationService _notifications;
   final Ref _ref;
   static const _uuid = Uuid();
+  Future<void> _reminderSync = Future.value();
 
   bool get isPro => _ref.read(proProvider).isPro;
 
@@ -152,7 +155,11 @@ class AppDataNotifier extends StateNotifier<AppData> {
     };
 
     final newGroups = <TaskGroup>[];
+    final visited = <String>{};
     void addBranch(String oldId, String? mappedParentId) {
+      if (!visited.add(oldId)) {
+        return;
+      }
       final old = state.groupById(oldId);
       if (old == null) {
         return;
@@ -426,12 +433,15 @@ class AppDataNotifier extends StateNotifier<AppData> {
     await _storage.saveAppData(state);
   }
 
-  Future<void> _syncReminders() async {
-    if (!_ref.read(settingsProvider).notificationsEnabled) {
-      await _notifications.syncTaskReminders(const []);
-      return;
-    }
-    await _notifications.syncTaskReminders(state.tasks);
+  Future<void> _syncReminders() {
+    _reminderSync = _reminderSync.then((_) async {
+      if (!_ref.read(settingsProvider).notificationsEnabled) {
+        await _notifications.syncTaskReminders(const []);
+        return;
+      }
+      await _notifications.syncTaskReminders(state.tasks);
+    }).catchError((_) {});
+    return _reminderSync;
   }
 }
 

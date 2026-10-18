@@ -71,7 +71,7 @@ class Recurrence {
         (value) => value.name == json['kind'],
         orElse: () => RecurrenceKind.none,
       ),
-      intervalDays: json['intervalDays'] as int? ?? 5,
+      intervalDays: _intervalDaysFromJson(json['intervalDays']),
       weekdays: _weekdaysFromJson(json),
     );
   }
@@ -82,7 +82,7 @@ class Recurrence {
       case RecurrenceKind.none:
         return from;
       case RecurrenceKind.everyNDays:
-        return from.add(Duration(days: intervalDays < 1 ? 1 : intervalDays));
+        return from.add(Duration(days: _clampedIntervalDays(intervalDays)));
       case RecurrenceKind.weekly:
         return _nextSelectedWeekday(from);
     }
@@ -108,6 +108,29 @@ class Recurrence {
   DateTime _atSameTime(DateTime day, DateTime from) {
     return DateTime(day.year, day.month, day.day, from.hour, from.minute);
   }
+}
+
+const int _minIntervalDays = 1;
+const int _maxIntervalDays = 3650;
+
+int _clampedIntervalDays(int days) {
+  if (days < _minIntervalDays) {
+    return _minIntervalDays;
+  }
+  if (days > _maxIntervalDays) {
+    return _maxIntervalDays;
+  }
+  return days;
+}
+
+int _intervalDaysFromJson(Object? value) {
+  if (value is int) {
+    return _clampedIntervalDays(value);
+  }
+  if (value is num) {
+    return _clampedIntervalDays(value.toInt());
+  }
+  return 5;
 }
 
 List<int> _weekdaysFromJson(Map<String, dynamic> json) {

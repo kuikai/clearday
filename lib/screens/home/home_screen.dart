@@ -71,6 +71,7 @@ class HomeScreen extends ConsumerWidget {
     final now = DateTime.now();
     final overdue = data.overdueTasks(now);
     final today = data.todaysTasks(now);
+    final upcoming = data.upcomingSoonTasks(now);
 
     return Scaffold(
       appBar: AppBar(
@@ -133,6 +134,7 @@ class HomeScreen extends ConsumerWidget {
                   data: data,
                   overdue: overdue,
                   today: today,
+                  upcoming: upcoming,
                 );
 
                 if (constraints.maxWidth >= _splitBreakpoint) {
@@ -220,10 +222,11 @@ class HomeScreen extends ConsumerWidget {
     required AppData data,
     required List<Task> overdue,
     required List<Task> today,
+    required List<Task> upcoming,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final doneCount = today.where((task) => task.isCompleted).length;
-    final isEmpty = overdue.isEmpty && today.isEmpty;
+    final isEmpty = overdue.isEmpty && today.isEmpty && upcoming.isEmpty;
 
     return [
       SectionHeader(
@@ -256,6 +259,12 @@ class HomeScreen extends ConsumerWidget {
             tasks: today,
             data: data,
           ),
+        _HomeTaskSection(
+          title: 'Upcoming',
+          tasks: upcoming,
+          data: data,
+          emptyMessage: 'Tasks due after today show up here.',
+        ),
       ],
     ];
   }
@@ -407,15 +416,18 @@ class _HomeTaskSection extends ConsumerWidget {
     required this.tasks,
     required this.data,
     this.accent,
+    this.emptyMessage,
   });
 
   final String title;
   final List<Task> tasks;
   final AppData data;
   final Color? accent;
+  final String? emptyMessage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -423,28 +435,40 @@ class _HomeTaskSection extends ConsumerWidget {
         children: [
           SectionHeader(
             title: title,
+            count: tasks.isEmpty ? null : tasks.length,
             accent: accent,
           ),
-          ...tasks.map((task) {
-            return TaskTile(
-              key: ValueKey(task.id),
-              task: task,
-              subtitle: data.groupPath(task.groupId),
-              onToggle: () {
-                ref.read(appDataProvider.notifier).toggleCompleted(task.id);
-              },
-              onOpen: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TaskEditorScreen(
-                      task: task,
-                      isNew: false,
+          if (tasks.isEmpty && emptyMessage != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
+              child: Text(
+                emptyMessage!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            )
+          else
+            ...tasks.map((task) {
+              return TaskTile(
+                key: ValueKey(task.id),
+                task: task,
+                subtitle: data.groupPath(task.groupId),
+                onToggle: () {
+                  ref.read(appDataProvider.notifier).toggleCompleted(task.id);
+                },
+                onOpen: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => TaskEditorScreen(
+                        task: task,
+                        isNew: false,
+                      ),
                     ),
-                  ),
-                );
-              },
-            );
-          }),
+                  );
+                },
+              );
+            }),
         ],
       ),
     );
