@@ -1,5 +1,4 @@
 import 'package:clearday/models/recurrence.dart';
-import 'package:clearday/providers/tasks_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/test_harness.dart';
@@ -38,6 +37,31 @@ void main() {
       // From completion day (today), not from any future stored due.
       expect(task.dueAt, dueDay.add(const Duration(days: 5)));
       expect(task.recurrence.kind, RecurrenceKind.everyNDays);
+    });
+
+    test('undo restores the due date of a recurring task', () async {
+      final container = await createTestContainer(isPro: true);
+      final now = DateTime.now();
+      final dueDay = DateTime(now.year, now.month, now.day, 9);
+
+      await addNamedTask(
+        container,
+        title: 'Water plants',
+        dueAt: dueDay,
+        dueHasTime: true,
+        recurrence: const Recurrence(
+          kind: RecurrenceKind.everyNDays,
+          intervalDays: 5,
+        ),
+      );
+      final before = taskNamed(container, 'Water plants');
+
+      await appNotifier(container).toggleCompleted(before.id);
+      await appNotifier(container).restoreTask(before);
+
+      final task = taskNamed(container, 'Water plants');
+      expect(task.isCompleted, isFalse);
+      expect(task.dueAt, dueDay);
     });
 
     test('Pro: completing twice the same day does not keep adding interval days',

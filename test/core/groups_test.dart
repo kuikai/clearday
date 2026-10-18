@@ -67,6 +67,19 @@ void main() {
       expect(groupsOf(container), isEmpty);
     });
 
+    test('reorders top-level groups', () async {
+      final container = await createTestContainer();
+      final home = defaultHomeGroup(container);
+      final workout = await addNamedGroup(container, 'Workout');
+
+      await appNotifier(container).reorderSiblings(null, 1, 0);
+
+      expect(
+        container.read(appDataProvider).topLevelGroups.map((group) => group.id),
+        [workout.id, home.id],
+      );
+    });
+
     test('free users cannot create more than 2 top-level groups', () async {
       final container = await createTestContainer();
       await addNamedGroup(container, 'Workout');

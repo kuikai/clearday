@@ -8,6 +8,7 @@ class SectionHeader extends StatelessWidget {
     this.count,
     this.progressLabel,
     this.accent,
+    this.action,
   });
 
   final String title;
@@ -15,6 +16,7 @@ class SectionHeader extends StatelessWidget {
   /// e.g. "4/6 done" — shown instead of [count] when set.
   final String? progressLabel;
   final Color? accent;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +54,10 @@ class SectionHeader extends StatelessWidget {
                 color: color.withValues(alpha: 0.8),
               ),
             ),
+          ],
+          if (action != null) ...[
+            const Spacer(),
+            action!,
           ],
         ],
       ),

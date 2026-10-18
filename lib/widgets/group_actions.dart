@@ -38,6 +38,30 @@ Future<void> renameGroupAction(
   await ref.read(appDataProvider.notifier).renameGroup(groupId, name);
 }
 
+Future<bool> confirmClearCompleted(BuildContext context, int count) async {
+  final label = count == 1 ? '1 completed task' : '$count completed tasks';
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Clear completed tasks?'),
+        content: Text('This removes $label from this group.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      );
+    },
+  );
+  return confirmed ?? false;
+}
+
 Future<void> deleteGroupAction(
   BuildContext context,
   WidgetRef ref,

@@ -26,6 +26,20 @@ class AppData {
     return groups.isEmpty ? null : groups.first;
   }
 
+  /// Last opened group, or the first group when that id is gone.
+  String? get preferredGroupId {
+    if (groupById(selectedGroupId) != null) {
+      return selectedGroupId;
+    }
+    if (topLevelGroups.isNotEmpty) {
+      return topLevelGroups.first.id;
+    }
+    if (groups.isEmpty) {
+      return null;
+    }
+    return groups.first.id;
+  }
+
   int get topLevelGroupCount => topLevelGroups.length;
 
   int get subgroupCount =>
@@ -157,20 +171,66 @@ class AppData {
   }
 
   /// Incomplete tasks due after today, soonest first.
-  /// Tomorrow and the next day stay at the top of the list.
   List<Task> upcomingSoonTasks(DateTime now) {
-    final result = tasks.where((task) {
-      final due = task.dueAt;
-      return !task.isCompleted && due != null && isAfterToday(due, now);
-    }).toList();
-    result.sort((a, b) {
-      final dueCmp = a.dueAt!.compareTo(b.dueAt!);
-      if (dueCmp != 0) {
-        return dueCmp;
-      }
-      return b.createdAt.compareTo(a.createdAt);
-    });
+    return _incompleteDue(now, (due) => isAfterToday(due, now));
+  }
+
+  /// Incomplete tasks due tomorrow or the day after, soonest first.
+  List<Task> upcomingWindowTasks(DateTime now) {
+    return _incompleteDue(now, (due) => isUpcomingWithinDays(due, now));
+  }
+
+  /// Incomplete tasks due after the two-day upcoming window, soonest first.
+  List<Task> laterTasks(DateTime now) {
+    return _incompleteDue(
+      now,
+      (due) => isAfterToday(due, now) && !isUpcomingWithinDays(due, now),
+    );
+  }
+
+  /// Reorders groups that share [parentId]. Null [parentId] reorders top-level
+  /// groups. [newIndex] is where the group lands after it is removed.
+  AppData withSiblingsReordered(String? parentId, int oldIndex, int newIndex) {
+    final siblings = parentId == null ? topLevelGroups : subgroupsOf(parentId);
+    final reordered = _moveListItem(siblings, oldIndex, newIndex);
+    if (reordered == null) {
+      return this;
+    }
+    var cursor = 0;
+    return copyWith(
+      groups: [
+        for (final group in groups)
+          if (_isSibling(group, parentId)) reordered[cursor++] else group,
+      ],
+    );
+  }
+
+  List<Task> _incompleteDue(
+    DateTime now,
+    bool Function(DateTime due) include,
+  ) {
+    final result = <Task>[
+      for (final task in tasks)
+        if (!task.isCompleted && task.dueAt != null && include(task.dueAt!))
+          task,
+    ];
+    result.sort(_byDueThenNewest);
     return result;
+  }
+
+  static int _byDueThenNewest(Task a, Task b) {
+    final dueCompare = a.dueAt!.compareTo(b.dueAt!);
+    if (dueCompare != 0) {
+      return dueCompare;
+    }
+    return b.createdAt.compareTo(a.createdAt);
+  }
+
+  static bool _isSibling(TaskGroup group, String? parentId) {
+    if (parentId == null) {
+      return group.isTopLevel;
+    }
+    return group.parentId == parentId;
   }
 
   AppData copyWith({
@@ -248,4 +308,19 @@ class AppData {
           group,
     ];
   }
+}
+
+/// Moves [oldIndex] to [newIndex]. [newIndex] is the index after the item
+/// has been removed. Returns null when the order would not change.
+List<T>? _moveListItem<T>(List<T> items, int oldIndex, int newIndex) {
+  if (oldIndex < 0 || oldIndex >= items.length) {
+    return null;
+  }
+  if (newIndex < 0 || newIndex >= items.length || newIndex == oldIndex) {
+    return null;
+  }
+  final next = [...items];
+  final moved = next.removeAt(oldIndex);
+  next.insert(newIndex, moved);
+  return next;
 }

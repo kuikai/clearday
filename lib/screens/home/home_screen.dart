@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/date_utils.dart';
 import '../../models/app_data.dart';
-import '../../models/task.dart';
 import '../../models/task_group.dart';
 import '../../providers/tasks_provider.dart';
 import '../../widgets/empty_state.dart';
@@ -12,12 +11,13 @@ import '../../widgets/group_actions.dart';
 import '../../widgets/group_name_dialog.dart';
 import '../../widgets/group_tile.dart';
 import '../../widgets/limit_banner.dart';
+import '../../widgets/reorderable_groups.dart';
 import '../../widgets/section_header.dart';
-import '../../widgets/task_tile.dart';
 import '../group/group_tasks_screen.dart';
 import '../paywall/paywall_screen.dart';
 import '../settings/settings_screen.dart';
 import '../task_editor/task_editor_screen.dart';
+import 'home_today_pane.dart';
 
 class _RecurringReactivator extends ConsumerStatefulWidget {
   const _RecurringReactivator();
@@ -69,9 +69,6 @@ class HomeScreen extends ConsumerWidget {
     final data = ref.watch(appDataProvider);
     final groups = data.topLevelGroups;
     final now = DateTime.now();
-    final overdue = data.overdueTasks(now);
-    final today = data.todaysTasks(now);
-    final upcoming = data.upcomingSoonTasks(now);
 
     return Scaffold(
       appBar: AppBar(
@@ -121,55 +118,32 @@ class HomeScreen extends ConsumerWidget {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final groupsChildren = _groupsChildren(
+                final today = HomeTodayPane(
+                  now: now,
+                  onAddDetailedTask: () => _addTask(context, ref),
+                );
+                final groupSlivers = _groupSlivers(
                   context,
                   ref,
                   groups: groups,
                   data: data,
                   now: now,
                 );
-                final todayChildren = _todayChildren(
-                  context,
-                  ref,
-                  data: data,
-                  overdue: overdue,
-                  today: today,
-                  upcoming: upcoming,
-                );
-
                 if (constraints.maxWidth >= _splitBreakpoint) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: ListView(
-                          padding: _panePadding,
-                          children: groupsChildren,
-                        ),
-                      ),
-                      VerticalDivider(
-                        width: 1,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outlineVariant
-                            .withValues(alpha: 0.6),
-                      ),
-                      Expanded(
-                        child: ListView(
-                          padding: _panePadding,
-                          children: todayChildren,
-                        ),
-                      ),
-                    ],
-                  );
+                  return _splitBody(context, groupSlivers, today);
                 }
-
-                return ListView(
-                  padding: _panePadding,
-                  children: [
-                    ...groupsChildren,
-                    const SizedBox(height: 8),
-                    ...todayChildren,
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: _panePadding,
+                      sliver: SliverMainAxisGroup(
+                        slivers: [
+                          ...groupSlivers,
+                          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                          SliverToBoxAdapter(child: today),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               },
@@ -180,93 +154,104 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _groupsChildren(
+  Widget _splitBody(
+    BuildContext context,
+    List<Widget> groupSlivers,
+    Widget today,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: _panePadding,
+                sliver: SliverMainAxisGroup(slivers: groupSlivers),
+              ),
+            ],
+          ),
+        ),
+        VerticalDivider(
+          width: 1,
+          color: Theme.of(context)
+              .colorScheme
+              .outlineVariant
+              .withValues(alpha: 0.6),
+        ),
+        Expanded(
+          child: ListView(
+            padding: _panePadding,
+            children: [today],
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _groupSlivers(
     BuildContext context,
     WidgetRef ref, {
     required List<TaskGroup> groups,
     required AppData data,
     required DateTime now,
   }) {
-    return [
-      SectionHeader(title: 'Groups', count: groups.length),
-      if (groups.isEmpty)
-        EmptyState(
-          title: 'No groups yet',
-          message: 'Create House Work, Workout, or Work to organize tasks.',
-          icon: Icons.folder_outlined,
-          action: FilledButton.icon(
-            onPressed: () => _addGroup(context, ref),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Add group'),
-          ),
-        )
-      else
-        for (final group in groups)
-          GroupTile(
-            group: group,
-            activeCount: data.activeCountFor(group.id),
-            overdueCount: data.overdueCountFor(group.id, now),
-            dueTodayCount: data.dueTodayCountFor(group.id, now),
-            onOpen: () => _openGroup(context, ref, group),
-            onAddSubgroup: () => _addSubgroup(context, ref, group.id),
-            onRename: () => _renameGroup(context, ref, group),
-            onCopy: () => _copyGroup(context, ref, group),
-            onDelete: () => _deleteGroup(context, ref, group),
-          ),
-    ];
+    return reorderableGroupSlivers(
+      header: SectionHeader(title: 'Groups', count: groups.length),
+      itemCount: groups.length,
+      onReorder: (oldIndex, newIndex) {
+        ref.read(appDataProvider.notifier).reorderSiblings(
+              null,
+              oldIndex,
+              newIndex,
+            );
+      },
+      empty: EmptyState(
+        title: 'No groups yet',
+        message: 'Create House Work, Workout, or Work to organize tasks.',
+        icon: Icons.folder_outlined,
+        action: FilledButton.icon(
+          onPressed: () => _addGroup(context, ref),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Add group'),
+        ),
+      ),
+      itemBuilder: (context, index) {
+        return _groupTile(
+          context,
+          ref,
+          data: data,
+          now: now,
+          group: groups[index],
+          index: index,
+          count: groups.length,
+        );
+      },
+    );
   }
 
-  List<Widget> _todayChildren(
+  Widget _groupTile(
     BuildContext context,
     WidgetRef ref, {
     required AppData data,
-    required List<Task> overdue,
-    required List<Task> today,
-    required List<Task> upcoming,
+    required DateTime now,
+    required TaskGroup group,
+    required int index,
+    required int count,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final doneCount = today.where((task) => task.isCompleted).length;
-    final isEmpty = overdue.isEmpty && today.isEmpty && upcoming.isEmpty;
-
-    return [
-      SectionHeader(
-        title: 'Today',
-        progressLabel:
-            today.isEmpty ? null : '$doneCount/${today.length} done',
-      ),
-      if (isEmpty)
-        EmptyState(
-          title: 'Nothing due today',
-          message: 'Tap Task to add something for today — it shows up here.',
-          icon: Icons.wb_sunny_outlined,
-          action: FilledButton.icon(
-            onPressed: () => _addTask(context, ref),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Add task'),
-          ),
-        )
-      else ...[
-        if (overdue.isNotEmpty)
-          _HomeTaskSection(
-            title: 'Overdue',
-            tasks: overdue,
-            data: data,
-            accent: colorScheme.error,
-          ),
-        if (today.isNotEmpty)
-          _HomeTaskSection(
-            title: 'Due today',
-            tasks: today,
-            data: data,
-          ),
-        _HomeTaskSection(
-          title: 'Upcoming',
-          tasks: upcoming,
-          data: data,
-          emptyMessage: 'Tasks due after today show up here.',
-        ),
-      ],
-    ];
+    return GroupTile(
+      key: ValueKey(group.id),
+      group: group,
+      reorderIndex: count > 1 ? index : null,
+      activeCount: data.activeCountFor(group.id),
+      overdueCount: data.overdueCountFor(group.id, now),
+      dueTodayCount: data.dueTodayCountFor(group.id, now),
+      onOpen: () => _openGroup(context, ref, group),
+      onAddSubgroup: () => _addSubgroup(context, ref, group.id),
+      onRename: () => _renameGroup(context, ref, group),
+      onCopy: () => _copyGroup(context, ref, group),
+      onDelete: () => _deleteGroup(context, ref, group),
+    );
   }
 
   Future<void> _addTask(BuildContext context, WidgetRef ref) async {
@@ -286,10 +271,10 @@ class HomeScreen extends ConsumerWidget {
       data = ref.read(appDataProvider);
     }
 
-    // First top-level group — predictable home for Today tasks.
-    final groupId = data.topLevelGroups.isNotEmpty
-        ? data.topLevelGroups.first.id
-        : data.groups.first.id;
+    final groupId = data.preferredGroupId;
+    if (groupId == null) {
+      return;
+    }
     await notifier.selectGroup(groupId);
     if (!context.mounted) {
       return;
@@ -406,71 +391,6 @@ class HomeScreen extends ConsumerWidget {
       ref,
       group.id,
       name: group.name,
-    );
-  }
-}
-
-class _HomeTaskSection extends ConsumerWidget {
-  const _HomeTaskSection({
-    required this.title,
-    required this.tasks,
-    required this.data,
-    this.accent,
-    this.emptyMessage,
-  });
-
-  final String title;
-  final List<Task> tasks;
-  final AppData data;
-  final Color? accent;
-  final String? emptyMessage;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            title: title,
-            count: tasks.isEmpty ? null : tasks.length,
-            accent: accent,
-          ),
-          if (tasks.isEmpty && emptyMessage != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
-              child: Text(
-                emptyMessage!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            )
-          else
-            ...tasks.map((task) {
-              return TaskTile(
-                key: ValueKey(task.id),
-                task: task,
-                subtitle: data.groupPath(task.groupId),
-                onToggle: () {
-                  ref.read(appDataProvider.notifier).toggleCompleted(task.id);
-                },
-                onOpen: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => TaskEditorScreen(
-                        task: task,
-                        isNew: false,
-                      ),
-                    ),
-                  );
-                },
-              );
-            }),
-        ],
-      ),
     );
   }
 }

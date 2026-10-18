@@ -217,10 +217,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       if (_dueAt == null) {
         return 'Set a due date first';
       }
-      final reminder = ref.read(appDataProvider.notifier).defaultReminderFor(
-            dueAt: _dueAt,
-            dueHasTime: _dueHasTime,
-          );
+      final reminder = defaultReminderFor(
+        dueAt: _dueAt,
+        dueHasTime: _dueHasTime,
+      );
       return reminder == null ? 'None' : formatReminderLabel(reminder);
     }
     if (_reminderAt == null) {
@@ -351,10 +351,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (isPro) {
       return;
     }
-    _reminderAt = ref.read(appDataProvider.notifier).defaultReminderFor(
-          dueAt: _dueAt,
-          dueHasTime: _dueHasTime,
-        );
+    _reminderAt = defaultReminderFor(
+      dueAt: _dueAt,
+      dueHasTime: _dueHasTime,
+    );
   }
 
   Future<void> _save() async {
@@ -377,10 +377,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final isPro = ref.read(proProvider).isPro;
     final reminder = isPro
         ? _reminderAt
-        : ref.read(appDataProvider.notifier).defaultReminderFor(
-              dueAt: _dueAt,
-              dueHasTime: _dueHasTime,
-            );
+        : defaultReminderFor(
+            dueAt: _dueAt,
+            dueHasTime: _dueHasTime,
+          );
     final recurrence = isPro ? _recurrence : const Recurrence();
     final saved = widget.task.copyWith(
       groupId: _groupId,

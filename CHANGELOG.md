@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-18
+- **Added** swipe right on a task — moves it to tomorrow, with Undo
+- **Added** Today on Overdue — moves that whole list to today, with Undo
+- **Updated** quick add — the keyboard stays open so the next task can be typed
+- **Added** quick add on Today — type a title to save a task due today in the last group you used
+- **Updated** home Task button — new tasks open in the last group you used
+- **Updated** home Upcoming — tomorrow and the next day stay visible; later tasks sit behind Later
+- **Added** swipe to mark a task done, with Undo
+- **Added** drag handles to reorder groups and subgroups
+- **Added** Clear on a group's Done list — removes completed tasks in that group
+- **Updated** task rows — one line of the note shows under the title
+
 ## 2026-10-14
 - **Updated** home **Upcoming** — always shown under Due today; lists incomplete tasks due after today
 - **Added** `AppData.upcomingSoonTasks` and `isUpcomingWithinDays` for the two-day window

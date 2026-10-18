@@ -8,12 +8,14 @@ class TaskTile extends StatelessWidget {
     super.key,
     required this.task,
     required this.onToggle,
+    required this.onMoveToTomorrow,
     required this.onOpen,
     this.subtitle,
   });
 
   final Task task;
-  final VoidCallback onToggle;
+  final Future<void> Function() onToggle;
+  final Future<void> Function() onMoveToTomorrow;
   final VoidCallback onOpen;
   final String? subtitle;
 
@@ -33,9 +35,26 @@ class TaskTile extends StatelessWidget {
     final due = task.dueAt;
     final completed = task.isCompleted;
 
+    final note = task.notes.trim().replaceAll(RegExp(r'\s+'), ' ');
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: AnimatedOpacity(
+      child: Dismissible(
+        key: ValueKey('swipe-${task.id}'),
+        direction: completed
+            ? DismissDirection.endToStart
+            : DismissDirection.horizontal,
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.startToEnd) {
+            await onMoveToTomorrow();
+          } else {
+            await onToggle();
+          }
+          return false;
+        },
+        background: const _SwipeBackground.tomorrow(),
+        secondaryBackground: _SwipeBackground.done(markingDone: !completed),
+        child: AnimatedOpacity(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         opacity: completed ? 0.62 : 1,
@@ -101,6 +120,18 @@ class TaskTile extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (note.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              note,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.62),
+                              ),
+                            ),
+                          ],
                           if (subtitle != null && subtitle!.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Text(
@@ -146,6 +177,53 @@ class TaskTile extends StatelessWidget {
           ),
         ),
       ),
+      ),
+    );
+  }
+}
+
+class _SwipeBackground extends StatelessWidget {
+  const _SwipeBackground.tomorrow()
+      : tomorrow = true,
+        markingDone = false;
+
+  const _SwipeBackground.done({required this.markingDone}) : tomorrow = false;
+
+  final bool tomorrow;
+  final bool markingDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final background = tomorrow
+        ? colorScheme.secondaryContainer
+        : markingDone
+            ? colorScheme.primaryContainer
+            : colorScheme.surfaceContainerHighest;
+    final foreground = tomorrow
+        ? colorScheme.onSecondaryContainer
+        : markingDone
+            ? colorScheme.onPrimaryContainer
+            : colorScheme.onSurface;
+    final icon = tomorrow
+        ? Icons.event_rounded
+        : markingDone
+            ? Icons.check_rounded
+            : Icons.undo_rounded;
+
+    return Container(
+      alignment: tomorrow
+          ? AlignmentDirectional.centerStart
+          : AlignmentDirectional.centerEnd,
+      padding: EdgeInsetsDirectional.only(
+        start: tomorrow ? 20 : 0,
+        end: tomorrow ? 0 : 20,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(icon, color: foreground),
     );
   }
 }

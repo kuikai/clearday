@@ -16,6 +16,7 @@ class GroupTile extends StatelessWidget {
     required this.onDelete,
     this.onAddSubgroup,
     this.isSubgroup = false,
+    this.reorderIndex,
   });
 
   final TaskGroup group;
@@ -28,6 +29,7 @@ class GroupTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onAddSubgroup;
   final bool isSubgroup;
+  final int? reorderIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -47,71 +49,91 @@ class GroupTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: status.border),
         ),
-        child: InkWell(
-          onTap: onOpen,
-          onLongPress: onRename,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: status.iconBackground,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    isSubgroup
-                        ? Icons.folder_copy_outlined
-                        : Icons.folder_outlined,
-                    color: status.iconForeground,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: onOpen,
+                onLongPress: onRename,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+                  child: Row(
                     children: [
-                      Text(
-                        group.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: status.titleColor,
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: status.iconBackground,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          isSubgroup
+                              ? Icons.folder_copy_outlined
+                              : Icons.folder_outlined,
+                          color: status.iconForeground,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _MetaChip(
-                            label: activeCount == 1
-                                ? '1 active task'
-                                : '$activeCount active tasks',
-                          ),
-                          if (status.isOverdue)
-                            _MetaChip(
-                              label: overdueCount == 1
-                                  ? '1 overdue'
-                                  : '$overdueCount overdue',
-                              kind: _ChipKind.overdue,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              group.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: status.titleColor,
+                              ),
                             ),
-                          if (status.isDueToday)
-                            _MetaChip(
-                              label: dueTodayCount == 1
-                                  ? '1 due today'
-                                  : '$dueTodayCount due today',
-                              kind: _ChipKind.dueToday,
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _MetaChip(
+                                  label: activeCount == 1
+                                      ? '1 active task'
+                                      : '$activeCount active tasks',
+                                ),
+                                if (status.isOverdue)
+                                  _MetaChip(
+                                    label: overdueCount == 1
+                                        ? '1 overdue'
+                                        : '$overdueCount overdue',
+                                    kind: _ChipKind.overdue,
+                                  ),
+                                if (status.isDueToday)
+                                  _MetaChip(
+                                    label: dueTodayCount == 1
+                                        ? '1 due today'
+                                        : '$dueTodayCount due today',
+                                    kind: _ChipKind.dueToday,
+                                  ),
+                              ],
                             ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                PopupMenuButton<String>(
+              ),
+            ),
+            if (reorderIndex != null)
+              ReorderableDragStartListener(
+                index: reorderIndex!,
+                child: const Tooltip(
+                  message: 'Reorder',
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Icon(Icons.drag_handle),
+                  ),
+                ),
+              ),
+            PopupMenuButton<String>(
                   tooltip: 'Group options',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
@@ -153,9 +175,7 @@ class GroupTile extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
+        );
   }
 }
 

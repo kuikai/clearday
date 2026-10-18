@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'constants/app_constants.dart';
+
 DateTime dateOnly(DateTime value) {
   return DateTime(value.year, value.month, value.day);
 }
@@ -56,4 +58,22 @@ String formatDueLabel(DateTime dueAt, {required bool hasTime}) {
 String formatReminderLabel(DateTime reminderAt) {
   return '${DateFormat.MMMd().format(reminderAt)} · '
       '${DateFormat.jm().format(reminderAt)}';
+}
+
+DateTime? defaultReminderFor({
+  required DateTime? dueAt,
+  required bool dueHasTime,
+}) {
+  if (dueAt == null) {
+    return null;
+  }
+  if (dueHasTime) {
+    return dueAt;
+  }
+  return DateTime(
+    dueAt.year,
+    dueAt.month,
+    dueAt.day,
+    AppConstants.defaultReminderHour,
+  );
 }

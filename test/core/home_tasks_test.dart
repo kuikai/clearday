@@ -121,4 +121,84 @@ void main() {
       );
     });
   });
+
+  group('upcoming window and later', () {
+    test('splits tomorrow and the next day from everything after', () {
+      final data = dataWith([
+        task(id: 'tomorrow', dueAt: DateTime(2026, 8, 18)),
+        task(id: 'inTwo', dueAt: DateTime(2026, 8, 19)),
+        task(id: 'later', dueAt: DateTime(2026, 8, 20)),
+        task(id: 'today', dueAt: DateTime(2026, 8, 17)),
+      ]);
+
+      expect(
+        data.upcomingWindowTasks(now).map((item) => item.id),
+        ['tomorrow', 'inTwo'],
+      );
+      expect(data.laterTasks(now).map((item) => item.id), ['later']);
+    });
+  });
+
+  group('group order', () {
+    test('moves a top-level group and keeps its subgroups with it', () {
+      final createdAt = DateTime(2026, 8, 1);
+      final data = AppData(
+        groups: [
+          TaskGroup(id: 'home', name: 'Home', createdAt: createdAt),
+          TaskGroup(
+            id: 'kitchen',
+            name: 'Kitchen',
+            createdAt: createdAt,
+            parentId: 'home',
+          ),
+          TaskGroup(id: 'work', name: 'Work', createdAt: createdAt),
+        ],
+        tasks: const [],
+        selectedGroupId: 'home',
+      );
+
+      final moved = data.withSiblingsReordered(null, 0, 1);
+
+      expect(moved.topLevelGroups.map((group) => group.id), ['work', 'home']);
+      expect(moved.subgroupsOf('home').map((group) => group.id), ['kitchen']);
+      expect(
+        moved.groups.map((group) => group.id),
+        ['work', 'kitchen', 'home'],
+      );
+    });
+
+    test('leaves the list alone when the drop does not change order', () {
+      final createdAt = DateTime(2026, 8, 1);
+      final data = AppData(
+        groups: [
+          TaskGroup(id: 'home', name: 'Home', createdAt: createdAt),
+          TaskGroup(id: 'work', name: 'Work', createdAt: createdAt),
+        ],
+        tasks: const [],
+        selectedGroupId: 'home',
+      );
+
+      expect(identical(data.withSiblingsReordered(null, 0, 0), data), isTrue);
+    });
+  });
+
+  group('preferredGroupId', () {
+    test('uses the selected group, then the first group', () {
+      final createdAt = DateTime(2026, 8, 1);
+      final data = AppData(
+        groups: [
+          TaskGroup(id: 'home', name: 'Home', createdAt: createdAt),
+          TaskGroup(id: 'work', name: 'Work', createdAt: createdAt),
+        ],
+        tasks: const [],
+        selectedGroupId: 'missing',
+      );
+
+      expect(data.preferredGroupId, 'home');
+      expect(
+        data.copyWith(selectedGroupId: 'work').preferredGroupId,
+        'work',
+      );
+    });
+  });
 }

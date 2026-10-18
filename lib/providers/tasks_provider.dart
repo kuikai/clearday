@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/date_utils.dart';
+import '../core/task_schedule.dart';
 import '../models/app_data.dart';
 import '../models/recurrence.dart';
 import '../models/task.dart';
@@ -12,6 +13,8 @@ import '../services/storage_service.dart';
 import 'app_providers.dart';
 import 'pro_provider.dart';
 import 'settings_provider.dart';
+
+export '../core/group_tasks.dart';
 
 enum SaveTaskResult { saved, blockedByTaskLimit, blockedByGroupLimit }
 
@@ -284,21 +287,82 @@ class AppDataNotifier extends StateNotifier<AppData> {
     await _syncReminders();
   }
 
-  DateTime? defaultReminderFor({
-    required DateTime? dueAt,
-    required bool dueHasTime,
-  }) {
-    if (dueAt == null) {
-      return null;
+  Future<void> reorderSiblings(String? parentId, int oldIndex, int newIndex) async {
+    final next = state.withSiblingsReordered(parentId, oldIndex, newIndex);
+    if (identical(next, state)) return;
+    state = next;
+    await _persist();
+  }
+
+  Future<void> restoreTask(Task task) => restoreTasks([task]);
+
+  Future<void> restoreTasks(List<Task> snapshots) async {
+    if (snapshots.isEmpty) return;
+    final pending = {for (final task in snapshots) task.id: task};
+    final tasks = [
+      for (final task in state.tasks) pending.remove(task.id) ?? task,
+      ...pending.values,
+    ];
+    state = state.copyWith(tasks: tasks);
+    await _persist();
+    await _syncReminders();
+  }
+
+  Future<void> clearCompletedInGroup(String groupId) async {
+    final tasks = [
+      for (final task in state.tasks)
+        if (task.groupId != groupId || !task.isCompleted) task,
+    ];
+    if (tasks.length == state.tasks.length) return;
+    state = state.copyWith(tasks: tasks);
+    await _persist();
+    await _syncReminders();
+  }
+
+  Future<bool> moveDueToTomorrow(String taskId) async {
+    final index = state.tasks.indexWhere((task) => task.id == taskId);
+    if (index < 0) return false;
+    final moved = taskMovedToTomorrow(state.tasks[index], DateTime.now());
+    if (moved == null) return false;
+    final tasks = [...state.tasks];
+    tasks[index] = _applyFreeReminderRules(moved);
+    state = state.copyWith(tasks: tasks);
+    await _persist();
+    await _syncReminders();
+    return true;
+  }
+
+  Future<List<Task>> moveOverdueToToday({String? groupId}) async {
+    final plan = planOverdueMoveToToday(
+      state.tasks,
+      DateTime.now(),
+      groupId: groupId,
+    );
+    if (plan.previous.isEmpty) return const [];
+    state = state.copyWith(
+      tasks: tasksWithReminderOnMoved(plan, _applyFreeReminderRules),
+    );
+    await _persist();
+    await _syncReminders();
+    return plan.previous;
+  }
+
+  Future<SaveTaskResult> quickAddTask({
+    required String title,
+    required String groupId,
+  }) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty || state.groupById(groupId) == null) {
+      return SaveTaskResult.saved;
     }
-    if (dueHasTime) {
-      return dueAt;
-    }
-    return DateTime(
-      dueAt.year,
-      dueAt.month,
-      dueAt.day,
-      AppConstants.defaultReminderHour,
+    if (!canAddTask) return SaveTaskResult.blockedByTaskLimit;
+    state = state.copyWith(selectedGroupId: groupId);
+    return upsertTask(
+      newTaskDraft(
+        groupId: groupId,
+        dueAt: dateOnly(DateTime.now()),
+      ).copyWith(title: trimmed),
+      isNew: true,
     );
   }
 
@@ -332,23 +396,13 @@ class AppDataNotifier extends StateNotifier<AppData> {
     await _syncReminders();
   }
 
-  /// Marks the task done and moves its due date to the next occurrence.
-  /// It stays done until that date arrives, then [_reactivateRecurringTasks]
-  /// opens it again — no second task is created.
-  ///
-  /// Next due is always counted from *today* (completion), never from the
-  /// previous due date. That way toggling done on/off the same day does not
-  /// keep pushing the due date further out.
+  /// Completes a repeating task. The next due counts from today, and the task
+  /// opens again when that day arrives.
   Future<void> _completeRecurringTask(Task task) async {
     final now = DateTime.now();
-    final base = task.dueHasTime && task.dueAt != null
-        ? DateTime(
-            now.year,
-            now.month,
-            now.day,
-            task.dueAt!.hour,
-            task.dueAt!.minute,
-          )
+    final due = task.dueAt;
+    final base = task.dueHasTime && due != null
+        ? DateTime(now.year, now.month, now.day, due.hour, due.minute)
         : DateTime(now.year, now.month, now.day, 9);
     final nextDue = task.recurrence.nextDueAfter(base);
     final offset = task.dueAt != null && task.reminderAt != null
@@ -443,82 +497,4 @@ class AppDataNotifier extends StateNotifier<AppData> {
     }).catchError((_) {});
     return _reminderSync;
   }
-}
-
-class TaskGroups {
-  const TaskGroups({
-    required this.overdue,
-    required this.today,
-    required this.upcoming,
-    required this.noDate,
-    required this.done,
-  });
-
-  final List<Task> overdue;
-  final List<Task> today;
-  final List<Task> upcoming;
-  final List<Task> noDate;
-  final List<Task> done;
-
-  bool get isEmpty =>
-      overdue.isEmpty &&
-      today.isEmpty &&
-      upcoming.isEmpty &&
-      noDate.isEmpty &&
-      done.isEmpty;
-}
-
-TaskGroups groupTasks(List<Task> tasks, DateTime now) {
-  final overdue = <Task>[];
-  final today = <Task>[];
-  final upcoming = <Task>[];
-  final noDate = <Task>[];
-  final done = <Task>[];
-
-  for (final task in tasks) {
-    if (task.isCompleted) {
-      done.add(task);
-      continue;
-    }
-    final due = task.dueAt;
-    if (due == null) {
-      noDate.add(task);
-    } else if (isBeforeToday(due, now)) {
-      overdue.add(task);
-    } else if (isSameDay(due, now)) {
-      today.add(task);
-    } else {
-      upcoming.add(task);
-    }
-  }
-
-  int byDue(Task a, Task b) {
-    final aDue = a.dueAt;
-    final bDue = b.dueAt;
-    if (aDue == null && bDue == null) {
-      return b.createdAt.compareTo(a.createdAt);
-    }
-    if (aDue == null) {
-      return 1;
-    }
-    if (bDue == null) {
-      return -1;
-    }
-    return aDue.compareTo(bDue);
-  }
-
-  overdue.sort(byDue);
-  today.sort(byDue);
-  upcoming.sort(byDue);
-  noDate.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-  done.sort((a, b) => (b.completedAt ?? b.createdAt)
-      .compareTo(a.completedAt ?? a.createdAt));
-
-  return TaskGroups(
-    overdue: overdue,
-    today: today,
-    upcoming: upcoming,
-    noDate: noDate,
-    done: done,
-  );
 }
