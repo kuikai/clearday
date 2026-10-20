@@ -23,18 +23,10 @@ Future<void> toggleTaskWithUndo(
   if (!context.mounted) {
     return;
   }
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: Text(task.isCompleted ? 'Marked not done' : 'Marked done'),
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () {
-          notifier.restoreTask(task);
-        },
-      ),
-    ),
+  showUndoNotice(
+    context,
+    message: task.isCompleted ? 'Marked not done' : 'Marked done',
+    onUndo: () => notifier.restoreTask(task),
   );
 }
 
@@ -48,18 +40,10 @@ Future<void> moveTaskToTomorrowWithUndo(
   if (!changed || !context.mounted) {
     return;
   }
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: const Text('Due tomorrow'),
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () {
-          notifier.restoreTask(task);
-        },
-      ),
-    ),
+  showUndoNotice(
+    context,
+    message: 'Due tomorrow',
+    onUndo: () => notifier.restoreTask(task),
   );
 }
 
@@ -76,17 +60,67 @@ Future<void> moveOverdueToTodayWithUndo(
   final label = previous.length == 1
       ? 'Moved to today'
       : '${previous.length} moved to today';
+  showUndoNotice(
+    context,
+    message: label,
+    onUndo: () => notifier.restoreTasks(previous),
+  );
+}
+
+int _undoNoticeToken = 0;
+
+/// Shows [message] under the app bar, with Undo, then clears it.
+///
+/// The page moves down with the notice, so task settings stay visible.
+void showUndoNotice(
+  BuildContext context, {
+  required String message,
+  required VoidCallback onUndo,
+}) {
   final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: Text(label),
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () {
-          notifier.restoreTasks(previous);
-        },
-      ),
+  final token = ++_undoNoticeToken;
+  messenger
+    ..clearMaterialBanners()
+    ..hideCurrentSnackBar();
+  messenger.showMaterialBanner(
+    _undoBanner(
+      context,
+      message: message,
+      onUndo: () {
+        _undoNoticeToken++;
+        messenger.hideCurrentMaterialBanner();
+        onUndo();
+      },
     ),
+  );
+  Future<void>.delayed(const Duration(seconds: 4), () {
+    if (token != _undoNoticeToken) {
+      return;
+    }
+    messenger.hideCurrentMaterialBanner();
+  });
+}
+
+MaterialBanner _undoBanner(
+  BuildContext context, {
+  required String message,
+  required VoidCallback onUndo,
+}) {
+  final scheme = Theme.of(context).colorScheme;
+  return MaterialBanner(
+    elevation: 0,
+    backgroundColor: scheme.inverseSurface,
+    surfaceTintColor: Colors.transparent,
+    dividerColor: scheme.inverseSurface,
+    padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 4, 8),
+    contentTextStyle: TextStyle(color: scheme.onInverseSurface),
+    content: Text(message),
+    actions: [
+      TextButton(
+        style: TextButton.styleFrom(foregroundColor: scheme.inversePrimary),
+        onPressed: onUndo,
+        child: const Text('Undo'),
+      ),
+    ],
   );
 }

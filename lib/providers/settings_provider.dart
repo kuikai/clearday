@@ -38,4 +38,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await _storage.saveSettings(state);
     return false;
   }
+
+  Future<void> setGroupsExpanded(bool value) async {
+    state = state.copyWith(groupsExpanded: value);
+    await _storage.saveSettings(state);
+  }
 }

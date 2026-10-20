@@ -4,18 +4,22 @@ class AppSettings {
   const AppSettings({
     this.themeMode = ThemeMode.system,
     this.notificationsEnabled = true,
+    this.groupsExpanded = true,
   });
 
   final ThemeMode themeMode;
   final bool notificationsEnabled;
+  final bool groupsExpanded;
 
   AppSettings copyWith({
     ThemeMode? themeMode,
     bool? notificationsEnabled,
+    bool? groupsExpanded,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      groupsExpanded: groupsExpanded ?? this.groupsExpanded,
     );
   }
 
@@ -23,6 +27,7 @@ class AppSettings {
     return {
       'themeMode': themeMode.name,
       'notificationsEnabled': notificationsEnabled,
+      'groupsExpanded': groupsExpanded,
     };
   }
 
@@ -33,6 +38,7 @@ class AppSettings {
         orElse: () => ThemeMode.system,
       ),
       notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
+      groupsExpanded: json['groupsExpanded'] as bool? ?? true,
     );
   }
 }

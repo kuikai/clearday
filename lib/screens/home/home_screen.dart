@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/date_utils.dart';
 import '../../models/app_data.dart';
 import '../../models/task_group.dart';
+import '../../providers/settings_provider.dart';
 import '../../providers/tasks_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/group_actions.dart';
@@ -196,8 +197,21 @@ class HomeScreen extends ConsumerWidget {
     required AppData data,
     required DateTime now,
   }) {
+    final expanded = ref.watch(
+      settingsProvider.select((settings) => settings.groupsExpanded),
+    );
+    final header = _GroupsHeader(
+      count: groups.length,
+      expanded: expanded,
+      onToggle: () {
+        ref.read(settingsProvider.notifier).setGroupsExpanded(!expanded);
+      },
+    );
+    if (!expanded) {
+      return [SliverToBoxAdapter(child: header)];
+    }
     return reorderableGroupSlivers(
-      header: SectionHeader(title: 'Groups', count: groups.length),
+      header: header,
       itemCount: groups.length,
       onReorder: (oldIndex, newIndex) {
         ref.read(appDataProvider.notifier).reorderSiblings(
@@ -391,6 +405,38 @@ class HomeScreen extends ConsumerWidget {
       ref,
       group.id,
       name: group.name,
+    );
+  }
+}
+
+class _GroupsHeader extends StatelessWidget {
+  const _GroupsHeader({
+    required this.count,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final int count;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onToggle,
+        borderRadius: BorderRadius.circular(12),
+        child: SectionHeader(
+          title: 'Groups',
+          count: count,
+          action: Icon(
+            expanded ? Icons.expand_less : Icons.expand_more,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          ),
+        ),
+      ),
     );
   }
 }
