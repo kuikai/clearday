@@ -7,6 +7,7 @@ import '../core/constants/app_constants.dart';
 import '../models/app_data.dart';
 import '../models/app_settings.dart';
 import '../models/task_group.dart';
+import 'today_widget_service.dart';
 
 /// Persists app data, settings, and cached Pro status locally.
 class StorageService {
@@ -42,6 +43,7 @@ class StorageService {
 
   Future<void> saveAppData(AppData data) async {
     await _prefs.setString(_dataKey, jsonEncode(data.toJson()));
+    await publishTodayWidget(_prefs, data);
   }
 
   AppData seedAppData() {
