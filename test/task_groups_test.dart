@@ -1,3 +1,4 @@
+import 'package:clearday/models/recurrence.dart';
 import 'package:clearday/models/task.dart';
 import 'package:clearday/providers/tasks_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,7 @@ void main() {
     required String id,
     DateTime? dueAt,
     bool completed = false,
+    Recurrence recurrence = const Recurrence(),
   }) {
     return Task(
       id: id,
@@ -16,6 +18,7 @@ void main() {
       dueAt: dueAt,
       isCompleted: completed,
       completedAt: completed ? DateTime(2026, 8, 17) : null,
+      recurrence: recurrence,
     );
   }
 
@@ -36,6 +39,33 @@ void main() {
     expect(groups.today.map((item) => item.id), ['today']);
     expect(groups.upcoming.map((item) => item.id), ['upcoming']);
     expect(groups.noDate.map((item) => item.id), ['none']);
+    expect(groups.done.map((item) => item.id), ['done']);
+  });
+
+  test('puts a finished repeat in upcoming until its next date', () {
+    final now = DateTime(2026, 8, 17, 12);
+    const repeat = Recurrence(
+      kind: RecurrenceKind.everyNDays,
+      intervalDays: 5,
+    );
+    final groups = groupTasks(
+      [
+        task(
+          id: 'waiting',
+          dueAt: DateTime(2026, 8, 22),
+          completed: true,
+          recurrence: repeat,
+        ),
+        task(
+          id: 'done',
+          dueAt: DateTime(2026, 8, 22),
+          completed: true,
+        ),
+      ],
+      now,
+    );
+
+    expect(groups.upcoming.map((item) => item.id), ['waiting']);
     expect(groups.done.map((item) => item.id), ['done']);
   });
 }

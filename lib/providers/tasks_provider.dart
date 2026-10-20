@@ -236,6 +236,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
     if (!isPro) {
       toSave = toSave.copyWith(recurrence: const Recurrence());
     }
+    toSave = taskWithFirstRepeatDue(toSave, DateTime.now());
 
     final tasks = [...state.tasks];
     final index = tasks.indexWhere((item) => item.id == toSave.id);
@@ -309,9 +310,13 @@ class AppDataNotifier extends StateNotifier<AppData> {
   }
 
   Future<void> clearCompletedInGroup(String groupId) async {
+    final now = DateTime.now();
     final tasks = [
       for (final task in state.tasks)
-        if (task.groupId != groupId || !task.isCompleted) task,
+        if (task.groupId != groupId ||
+            !task.isCompleted ||
+            isWaitingToRepeat(task, now))
+          task,
     ];
     if (tasks.length == state.tasks.length) return;
     state = state.copyWith(tasks: tasks);
@@ -438,18 +443,11 @@ class AppDataNotifier extends StateNotifier<AppData> {
     final now = DateTime.now();
     var changed = false;
     final tasks = state.tasks.map((task) {
-      final due = task.dueAt;
-      if (!task.isCompleted ||
-          !task.recurrence.isEnabled ||
-          due == null ||
-          isAfterToday(due, now)) {
-        return task;
+      final next = prepareRecurringTask(task, now);
+      if (!identical(next, task)) {
+        changed = true;
       }
-      changed = true;
-      return task.copyWith(
-        isCompleted: false,
-        clearCompletedAt: true,
-      );
+      return next;
     }).toList();
 
     if (!changed) {

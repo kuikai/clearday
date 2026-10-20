@@ -1,5 +1,6 @@
 import 'package:clearday/core/date_utils.dart';
 import 'package:clearday/models/app_data.dart';
+import 'package:clearday/models/recurrence.dart';
 import 'package:clearday/models/task.dart';
 import 'package:clearday/models/task_group.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,7 @@ void main() {
     DateTime? dueAt,
     bool completed = false,
     DateTime? createdAt,
+    Recurrence recurrence = const Recurrence(),
   }) {
     return Task(
       id: id,
@@ -26,6 +28,7 @@ void main() {
       dueAt: dueAt,
       isCompleted: completed,
       completedAt: completed ? DateTime(2026, 8, 17) : null,
+      recurrence: recurrence,
     );
   }
 
@@ -135,6 +138,35 @@ void main() {
         data.upcomingWindowTasks(now).map((item) => item.id),
         ['tomorrow', 'inTwo'],
       );
+      expect(data.laterTasks(now).map((item) => item.id), ['later']);
+    });
+
+    test('keeps a finished repeat visible until its next date', () {
+      const repeat = Recurrence(
+        kind: RecurrenceKind.everyNDays,
+        intervalDays: 5,
+      );
+      final data = dataWith([
+        task(
+          id: 'soon',
+          dueAt: DateTime(2026, 8, 18),
+          completed: true,
+          recurrence: repeat,
+        ),
+        task(
+          id: 'later',
+          dueAt: DateTime(2026, 8, 22),
+          completed: true,
+          recurrence: repeat,
+        ),
+        task(
+          id: 'doneOnce',
+          dueAt: DateTime(2026, 8, 18),
+          completed: true,
+        ),
+      ]);
+
+      expect(data.upcomingWindowTasks(now).map((item) => item.id), ['soon']);
       expect(data.laterTasks(now).map((item) => item.id), ['later']);
     });
   });

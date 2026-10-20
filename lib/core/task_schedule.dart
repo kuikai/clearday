@@ -1,6 +1,45 @@
 import '../models/task.dart';
 import 'date_utils.dart';
 
+/// True when a finished repeating task is waiting for a future due date.
+bool isWaitingToRepeat(Task task, DateTime now) {
+  final due = task.dueAt;
+  if (!task.isCompleted || !task.recurrence.isEnabled || due == null) {
+    return false;
+  }
+  return isAfterToday(due, now);
+}
+
+/// Puts the first occurrence on [today] when a repeat has no due date.
+Task taskWithFirstRepeatDue(Task task, DateTime today) {
+  if (!task.recurrence.isEnabled || task.dueAt != null) {
+    return task;
+  }
+  return task.copyWith(
+    dueAt: dateOnly(today),
+    dueHasTime: false,
+  );
+}
+
+/// Fills a missing first due date, then reopens a repeat whose day has arrived.
+Task prepareRecurringTask(Task task, DateTime now) {
+  return _reopenRecurringTask(taskWithFirstRepeatDue(task, now), now);
+}
+
+Task _reopenRecurringTask(Task task, DateTime now) {
+  final due = task.dueAt;
+  if (!task.isCompleted ||
+      !task.recurrence.isEnabled ||
+      due == null ||
+      isAfterToday(due, now)) {
+    return task;
+  }
+  return task.copyWith(
+    isCompleted: false,
+    clearCompletedAt: true,
+  );
+}
+
 /// A copy of [task] due the day after [now], or null when it should stay put.
 ///
 /// A clock time is kept when the task already has one. A reminder keeps the

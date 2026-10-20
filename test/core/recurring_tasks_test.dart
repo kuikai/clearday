@@ -1,3 +1,4 @@
+import 'package:clearday/core/date_utils.dart';
 import 'package:clearday/models/recurrence.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -155,6 +156,60 @@ void main() {
       final task = taskNamed(container, 'Water plants');
       expect(task.isCompleted, isTrue);
       expect(task.dueAt!.isAfter(DateTime.now()), isTrue);
+    });
+
+    test('Pro: every few days with no due date starts today', () async {
+      final container = await createTestContainer(isPro: true);
+
+      await addNamedTask(
+        container,
+        title: 'Water plants',
+        recurrence: const Recurrence(
+          kind: RecurrenceKind.everyNDays,
+          intervalDays: 5,
+        ),
+      );
+
+      final task = taskNamed(container, 'Water plants');
+      expect(task.dueAt, dateOnly(DateTime.now()));
+      expect(task.dueHasTime, isFalse);
+      expect(task.isCompleted, isFalse);
+    });
+
+    test('clear completed keeps a repeat that is waiting for its next date',
+        () async {
+      final container = await createTestContainer(isPro: true);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day, 9);
+
+      await addNamedTask(
+        container,
+        title: 'Water plants',
+        dueAt: today,
+        dueHasTime: true,
+        recurrence: const Recurrence(
+          kind: RecurrenceKind.everyNDays,
+          intervalDays: 5,
+        ),
+      );
+      await addNamedTask(
+        container,
+        title: 'One time',
+        dueAt: today,
+      );
+      await appNotifier(container).toggleCompleted(
+        taskNamed(container, 'Water plants').id,
+      );
+      await appNotifier(container).toggleCompleted(
+        taskNamed(container, 'One time').id,
+      );
+
+      await appNotifier(container).clearCompletedInGroup(
+        defaultHomeGroup(container).id,
+      );
+
+      expect(tasksOf(container).map((task) => task.title), ['Water plants']);
+      expect(taskNamed(container, 'Water plants').isCompleted, isTrue);
     });
 
     test('free: recurrence is stripped on save and stays a single done task',

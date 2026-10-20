@@ -1,4 +1,5 @@
 import '../core/date_utils.dart';
+import '../core/task_schedule.dart';
 import 'task.dart';
 import 'task_group.dart';
 
@@ -172,17 +173,19 @@ class AppData {
 
   /// Incomplete tasks due after today, soonest first.
   List<Task> upcomingSoonTasks(DateTime now) {
-    return _incompleteDue(now, (due) => isAfterToday(due, now));
+    return _incompleteDue((due) => isAfterToday(due, now));
   }
 
-  /// Incomplete tasks due tomorrow or the day after, soonest first.
+  /// Tasks due tomorrow or the day after, soonest first.
+  /// A finished repeat stays here until its next date falls in this window.
   List<Task> upcomingWindowTasks(DateTime now) {
-    return _incompleteDue(now, (due) => isUpcomingWithinDays(due, now));
+    return _openOrWaitingDue(now, (due) => isUpcomingWithinDays(due, now));
   }
 
-  /// Incomplete tasks due after the two-day upcoming window, soonest first.
+  /// Tasks due after the two-day upcoming window, soonest first.
+  /// A finished repeat stays here until its next date is further out.
   List<Task> laterTasks(DateTime now) {
-    return _incompleteDue(
+    return _openOrWaitingDue(
       now,
       (due) => isAfterToday(due, now) && !isUpcomingWithinDays(due, now),
     );
@@ -205,14 +208,32 @@ class AppData {
     );
   }
 
-  List<Task> _incompleteDue(
+  List<Task> _incompleteDue(bool Function(DateTime due) include) {
+    return _dueWhere(
+      include,
+      (task) => !task.isCompleted && task.dueAt != null,
+    );
+  }
+
+  List<Task> _openOrWaitingDue(
     DateTime now,
     bool Function(DateTime due) include,
   ) {
+    return _dueWhere(
+      include,
+      (task) =>
+          task.dueAt != null &&
+          (!task.isCompleted || isWaitingToRepeat(task, now)),
+    );
+  }
+
+  List<Task> _dueWhere(
+    bool Function(DateTime due) include,
+    bool Function(Task task) keep,
+  ) {
     final result = <Task>[
       for (final task in tasks)
-        if (!task.isCompleted && task.dueAt != null && include(task.dueAt!))
-          task,
+        if (keep(task) && include(task.dueAt!)) task,
     ];
     result.sort(_byDueThenNewest);
     return result;

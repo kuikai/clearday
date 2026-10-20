@@ -155,7 +155,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                             ? 'None'
                             : formatDueLabel(_dueAt!, hasTime: _dueHasTime),
                         onTap: _pickDueDate,
-                        onClear: _dueAt == null ? null : _clearDue,
+                        onClear: _dueAt == null || _recurrence.isEnabled
+                            ? null
+                            : _clearDue,
                       ),
                       if (_dueAt != null)
                         SwitchListTile.adaptive(
@@ -205,7 +207,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                   recurrence: _recurrence,
                   enabled: isPro,
                   onLockedTap: () => showPaywall(context),
-                  onChanged: (value) => setState(() => _recurrence = value),
+                  onChanged: (value) => setState(() => _setRecurrence(value)),
                 ),
               ],
             ),
@@ -332,6 +334,16 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         time.minute,
       );
     });
+  }
+
+  void _setRecurrence(Recurrence value) {
+    _recurrence = value;
+    if (!value.isEnabled || _dueAt != null) {
+      return;
+    }
+    _dueAt = dateOnly(DateTime.now());
+    _dueHasTime = false;
+    _syncFreeReminder();
   }
 
   void _clearDue() {

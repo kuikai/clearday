@@ -1,5 +1,6 @@
 import '../models/task.dart';
 import 'date_utils.dart';
+import 'task_schedule.dart';
 
 class TaskGroups {
   const TaskGroups({
@@ -32,7 +33,8 @@ TaskGroups groupTasks(List<Task> tasks, DateTime now) {
   final done = <Task>[];
 
   for (final task in tasks) {
-    if (task.isCompleted) {
+    // A finished repeat stays under Upcoming until the next date arrives.
+    if (task.isCompleted && !isWaitingToRepeat(task, now)) {
       done.add(task);
       continue;
     }

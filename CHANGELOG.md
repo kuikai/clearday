@@ -1,6 +1,15 @@
 # Changelog
 
+## 2026-10-20
+- **Updated** undo notice — sits under the title bar so it no longer covers task settings
+- **Updated** Every few days and Weekly — turning repeat on with no due date puts the first one on Today
+- **Updated** Upcoming and Later — a finished repeating task stays listed until its next date
+
+## 2026-10-19
+- **Added** Android home-screen widget — shows overdue and today’s tasks, and opens the app when tapped
+
 ## 2026-10-18
+- **Updated** home Groups — tap the header to collapse the list, and it stays that way
 - **Added** swipe right on a task — moves it to tomorrow, with Undo
 - **Added** Today on Overdue — moves that whole list to today, with Undo
 - **Updated** quick add — the keyboard stays open so the next task can be typed
