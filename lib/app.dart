@@ -14,12 +14,15 @@ class ClearDayApp extends ConsumerWidget {
     final themeMode = ref.watch(
       settingsProvider.select((settings) => settings.themeMode),
     );
+    final skin = ref.watch(
+      settingsProvider.select((settings) => settings.skin),
+    );
 
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(skin: skin),
+      darkTheme: AppTheme.dark(skin: skin),
       themeMode: themeMode,
       home: const HomeScreen(),
     );

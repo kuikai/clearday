@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23
+- **Added** `lib/core/theme/app_skin.dart` — Clear, Ocean, Dusk, Ember, Blossom, and Stone color skins
+- **Added** `lib/widgets/skin_picker.dart` — skin choices on the Settings appearance card
+- **Updated** theme and settings — the chosen skin is saved and applied in light and dark mode
+
 ## 2026-10-20
 - **Updated** undo notice — sits under the title bar so it no longer covers task settings
 - **Updated** Every few days and Weekly — turning repeat on with no due date puts the first one on Today

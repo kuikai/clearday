@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
+import 'app_skin.dart';
 
 /// Material 3 light/dark themes with a clean, calm look.
 class AppTheme {
@@ -10,47 +11,49 @@ class AppTheme {
   static const double radius = 20;
   static const double radiusSmall = 16;
 
-  static ThemeData light() {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.teal,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.teal,
-      onPrimary: Colors.white,
-      surface: AppColors.lightSurface,
-      onSurface: AppColors.lightOnSurface,
-      outline: const Color(0xFFC5D4CE),
-      outlineVariant: const Color(0xFFDCE7E2),
-    );
+  static ThemeData light({AppSkin skin = AppSkin.clear}) {
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: skin.lightPrimary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: skin.lightPrimary,
+          onPrimary: Colors.white,
+          surface: AppColors.lightSurface,
+          onSurface: skin.lightOnSurface,
+          outline: skin.lightOutline,
+          outlineVariant: skin.lightOutlineVariant,
+        );
 
     return _buildTheme(
       colorScheme: colorScheme,
-      scaffoldBackground: AppColors.lightBackground,
+      scaffoldBackground: skin.lightBackground,
       cardColor: AppColors.lightSurface,
     );
   }
 
-  static ThemeData dark() {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.tealGlow,
-      brightness: Brightness.dark,
-    ).copyWith(
-      primary: AppColors.tealGlow,
-      onPrimary: const Color(0xFF06201C),
-      surface: AppColors.darkSurface,
-      onSurface: AppColors.darkOnSurface,
-      error: const Color(0xFFFFB4AB),
-      onError: const Color(0xFF690005),
-      errorContainer: const Color(0xFF5C1A16),
-      onErrorContainer: const Color(0xFFFFDAD6),
-      outline: const Color(0xFF4A635C),
-      outlineVariant: const Color(0xFF2C3F38),
-    );
+  static ThemeData dark({AppSkin skin = AppSkin.clear}) {
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: skin.darkPrimary,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: skin.darkPrimary,
+          onPrimary: skin.darkOnPrimary,
+          surface: skin.darkSurface,
+          onSurface: skin.darkOnSurface,
+          error: const Color(0xFFFFB4AB),
+          onError: const Color(0xFF690005),
+          errorContainer: const Color(0xFF5C1A16),
+          onErrorContainer: const Color(0xFFFFDAD6),
+          outline: skin.darkOutline,
+          outlineVariant: skin.darkOutlineVariant,
+        );
 
     return _buildTheme(
       colorScheme: colorScheme,
-      scaffoldBackground: AppColors.darkBackground,
-      cardColor: AppColors.darkSurface,
+      scaffoldBackground: skin.darkBackground,
+      cardColor: skin.darkSurface,
     );
   }
 
@@ -125,9 +128,7 @@ class AppTheme {
         elevation: 2,
         focusElevation: 3,
         highlightElevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -155,9 +156,7 @@ class AppTheme {
         ),
       ),
       checkboxTheme: CheckboxThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         side: BorderSide(color: colorScheme.outline, width: 1.6),
       ),
       inputDecorationTheme: InputDecorationTheme(

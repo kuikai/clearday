@@ -6,6 +6,7 @@ import '../../providers/pro_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/tasks_provider.dart';
 import '../../widgets/restore_purchase_button.dart';
+import '../../widgets/skin_picker.dart';
 import '../../widgets/upgrade_pro_button.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -18,61 +19,16 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Appearance',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(
-                        value: ThemeMode.system,
-                        label: Text('System'),
-                        icon: Icon(Icons.brightness_auto_rounded),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.light,
-                        label: Text('Light'),
-                        icon: Icon(Icons.light_mode_outlined),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.dark,
-                        label: Text('Dark'),
-                        icon: Icon(Icons.dark_mode_outlined),
-                      ),
-                    ],
-                    selected: {settings.themeMode},
-                    onSelectionChanged: (value) {
-                      ref
-                          .read(settingsProvider.notifier)
-                          .setThemeMode(value.first);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const _AppearanceCard(),
           const SizedBox(height: 16),
           Card(
             child: SwitchListTile.adaptive(
               title: const Text('Reminders'),
-              subtitle: const Text(
-                'Local notifications when a task is due',
-              ),
+              subtitle: const Text('Local notifications when a task is due'),
               value: settings.notificationsEnabled,
               onChanged: (value) async {
                 final granted = await ref
@@ -109,13 +65,15 @@ class SettingsScreen extends ConsumerWidget {
                   Text(
                     isPro
                         ? 'Pro is unlocked. Unlimited tasks, groups, '
-                            'recurring chores, and custom reminders.'
+                              'recurring chores, and custom reminders.'
                         : 'Free: ${AppConstants.freeActiveTaskLimit} active '
-                            'tasks, ${AppConstants.freeGroupLimit} groups, '
-                            'and ${AppConstants.freeSubgroupLimit} subgroups. '
-                            'Unlock Pro for unlimited use.',
+                              'tasks, ${AppConstants.freeGroupLimit} groups, '
+                              'and ${AppConstants.freeSubgroupLimit} subgroups. '
+                              'Unlock Pro for unlimited use.',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.65,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -139,6 +97,82 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AppearanceCard extends ConsumerWidget {
+  const _AppearanceCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Appearance',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const _ThemeModeButton(),
+            const SizedBox(height: 16),
+            Text(
+              'Skin',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SkinPicker(
+              selected: settings.skin,
+              onSelected: ref.read(settingsProvider.notifier).setSkin,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeModeButton extends ConsumerWidget {
+  const _ThemeModeButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(
+      settingsProvider.select((settings) => settings.themeMode),
+    );
+
+    return SegmentedButton<ThemeMode>(
+      segments: const [
+        ButtonSegment(
+          value: ThemeMode.system,
+          label: Text('System'),
+          icon: Icon(Icons.brightness_auto_rounded),
+        ),
+        ButtonSegment(
+          value: ThemeMode.light,
+          label: Text('Light'),
+          icon: Icon(Icons.light_mode_outlined),
+        ),
+        ButtonSegment(
+          value: ThemeMode.dark,
+          label: Text('Dark'),
+          icon: Icon(Icons.dark_mode_outlined),
+        ),
+      ],
+      selected: {mode},
+      onSelectionChanged: (value) {
+        ref.read(settingsProvider.notifier).setThemeMode(value.first);
+      },
     );
   }
 }
