@@ -35,6 +35,13 @@ android {
         multiDexEnabled = true
     }
 
+    packaging {
+        jniLibs {
+            // Uncompressed native libs so the bundle stays 16 KB page-aligned.
+            useLegacyPackaging = false
+        }
+    }
+
     signingConfigs {
         create("release") {
             check(keystorePropertiesFile.exists()) {
@@ -50,6 +57,9 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
 }

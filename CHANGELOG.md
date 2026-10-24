@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-24
+- **Updated** `pubspec.yaml` — Android version code 6, because Play already has version code 5
+- **Updated** Android release — Play billing permission, 16 KB native packaging, and native debug symbols in the app bundle
+- **Updated** reminder notifications — status-bar icon is a white check instead of the full launcher artwork
+- **Updated** `lib/services/revenue_cat_service.dart` — release builds log warnings only
+
 ## 2026-10-23
 - **Added** `lib/core/theme/app_skin.dart` — Clear, Ocean, Dusk, Ember, Blossom, and Stone color skins
 - **Added** `lib/widgets/skin_picker.dart` — skin choices on the Settings appearance card

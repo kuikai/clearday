@@ -32,7 +32,7 @@ class RevenueCatService {
       return;
     }
 
-    await Purchases.setLogLevel(kDebugMode ? LogLevel.debug : LogLevel.info);
+    await Purchases.setLogLevel(kDebugMode ? LogLevel.debug : LogLevel.warn);
     await Purchases.configure(PurchasesConfiguration(apiKey));
     _isConfigured = true;
   }
@@ -112,6 +112,10 @@ class RevenueCatService {
   }
 
   void logEntitlements(CustomerInfo customerInfo, String source) {
+    if (!kDebugMode) {
+      return;
+    }
+
     final activeIds = customerInfo.entitlements.active.keys.toList();
     final allSummaries = customerInfo.entitlements.all.entries
         .map((entry) => '${entry.key}(isActive=${entry.value.isActive})')
