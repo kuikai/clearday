@@ -21,8 +21,7 @@ class Recurrence {
     final days = <int>{
       for (final day in weekdays)
         if (day >= DateTime.monday && day <= DateTime.sunday) day,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     return days;
   }
 
@@ -82,7 +81,15 @@ class Recurrence {
       case RecurrenceKind.none:
         return from;
       case RecurrenceKind.everyNDays:
-        return from.add(Duration(days: _clampedIntervalDays(intervalDays)));
+        // Calendar days keep 9:00 at 9:00 when daylight saving changes.
+        return _atSameTime(
+          DateTime(
+            from.year,
+            from.month,
+            from.day + _clampedIntervalDays(intervalDays),
+          ),
+          from,
+        );
       case RecurrenceKind.weekly:
         return _nextSelectedWeekday(from);
     }
@@ -138,10 +145,7 @@ List<int> _weekdaysFromJson(Map<String, dynamic> json) {
   if (rawDays is List && rawDays.isNotEmpty) {
     return [
       for (final day in rawDays)
-        if (day is int)
-          day
-        else if (day is num)
-          day.toInt(),
+        if (day is int) day else if (day is num) day.toInt(),
     ];
   }
   // Older saves stored a single weekday.

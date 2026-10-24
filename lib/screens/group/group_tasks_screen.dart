@@ -169,11 +169,9 @@ class GroupTasksScreen extends ConsumerWidget {
       header: SectionHeader(title: 'Subgroups', count: subgroups.length),
       itemCount: subgroups.length,
       onReorder: (oldIndex, newIndex) {
-        ref.read(appDataProvider.notifier).reorderSiblings(
-              groupId,
-              oldIndex,
-              newIndex,
-            );
+        ref
+            .read(appDataProvider.notifier)
+            .reorderSiblings(groupId, oldIndex, newIndex);
       },
       itemBuilder: (context, index) {
         final subgroup = subgroups[index];
@@ -233,7 +231,7 @@ class GroupTasksScreen extends ConsumerWidget {
   ) async {
     final notifier = ref.read(appDataProvider.notifier);
     if (!notifier.canAddSubgroup) {
-      await showPaywall(context);
+      await showPaywall(context, reason: PaywallReason.subgroups);
       return;
     }
     final name = await promptGroupName(context, title: 'New subgroup');
@@ -242,7 +240,7 @@ class GroupTasksScreen extends ConsumerWidget {
     }
     final result = await notifier.addGroup(name, parentId: parentId);
     if (result == SaveTaskResult.blockedByGroupLimit && context.mounted) {
-      await showPaywall(context);
+      await showPaywall(context, reason: PaywallReason.subgroups);
     }
   }
 
@@ -273,18 +271,13 @@ class GroupTasksScreen extends ConsumerWidget {
     WidgetRef ref,
     TaskGroup group,
   ) {
-    return deleteGroupAction(
-      context,
-      ref,
-      group.id,
-      name: group.name,
-    );
+    return deleteGroupAction(context, ref, group.id, name: group.name);
   }
 
   Future<void> _addTask(BuildContext context, WidgetRef ref) async {
     final notifier = ref.read(appDataProvider.notifier);
     if (!notifier.canAddTask) {
-      await showPaywall(context);
+      await showPaywall(context, reason: PaywallReason.tasks);
       return;
     }
     await notifier.selectGroup(groupId);
@@ -333,16 +326,13 @@ class _TaskSection extends ConsumerWidget {
             count: tasks.length,
             accent: accent,
             action: onClear != null
-                ? TextButton(
-                    onPressed: onClear,
-                    child: const Text('Clear'),
-                  )
+                ? TextButton(onPressed: onClear, child: const Text('Clear'))
                 : onMoveToToday == null
-                    ? null
-                    : TextButton(
-                        onPressed: onMoveToToday,
-                        child: const Text('Today'),
-                      ),
+                ? null
+                : TextButton(
+                    onPressed: onMoveToToday,
+                    child: const Text('Today'),
+                  ),
           ),
           for (final task in tasks)
             TaskTile(

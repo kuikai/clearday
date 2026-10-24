@@ -29,9 +29,9 @@ void main() {
       final container = await createTestContainer();
       await addNamedTask(container, title: 'Wipe counters');
 
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Wipe counters').id,
-      );
+      await appNotifier(
+        container,
+      ).toggleCompleted(taskNamed(container, 'Wipe counters').id);
 
       final task = taskNamed(container, 'Wipe counters');
       expect(task.isCompleted, isTrue);
@@ -41,9 +41,9 @@ void main() {
     test('completed tasks do not count toward the active limit', () async {
       final container = await createTestContainer();
       await addNamedTask(container, title: 'Done chore');
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Done chore').id,
-      );
+      await appNotifier(
+        container,
+      ).toggleCompleted(taskNamed(container, 'Done chore').id);
 
       expect(container.read(appDataProvider).activeTaskCount, 0);
     });
@@ -52,9 +52,9 @@ void main() {
       final container = await createTestContainer();
       await addNamedTask(container, title: 'Old chore');
 
-      await appNotifier(container).deleteTask(
-        taskNamed(container, 'Old chore').id,
-      );
+      await appNotifier(
+        container,
+      ).deleteTask(taskNamed(container, 'Old chore').id);
 
       expect(tasksOf(container), isEmpty);
     });
@@ -83,15 +83,47 @@ void main() {
       expect(notifier.canAddTask, isFalse);
     });
 
+    test(
+      'free users cannot reopen a done task when 25 are already active',
+      () async {
+        final container = await createTestContainer();
+        final notifier = appNotifier(container);
+        final homeId = defaultHomeGroup(container).id;
+
+        await addNamedTask(container, title: 'Finished', groupId: homeId);
+        final finished = taskNamed(container, 'Finished');
+        await notifier.toggleCompleted(finished.id);
+
+        for (var i = 0; i < AppConstants.freeActiveTaskLimit; i++) {
+          final result = await addNamedTask(
+            container,
+            title: 'Task $i',
+            groupId: homeId,
+          );
+          expect(result, SaveTaskResult.saved);
+        }
+
+        final blocked = await notifier.toggleCompleted(finished.id);
+        final undone = await notifier.restoreTask(finished);
+
+        expect(blocked, SaveTaskResult.blockedByTaskLimit);
+        expect(undone, SaveTaskResult.blockedByTaskLimit);
+        expect(taskNamed(container, 'Finished').isCompleted, isTrue);
+        expect(
+          container.read(appDataProvider).activeTaskCount,
+          AppConstants.freeActiveTaskLimit,
+        );
+      },
+    );
+
     test('quick add saves a trimmed task due today in that group', () async {
       final container = await createTestContainer();
       final home = defaultHomeGroup(container);
       final workout = await addNamedGroup(container, 'Workout');
 
-      final result = await appNotifier(container).quickAddTask(
-        title: '  Run  ',
-        groupId: workout.id,
-      );
+      final result = await appNotifier(
+        container,
+      ).quickAddTask(title: '  Run  ', groupId: workout.id);
 
       expect(result, SaveTaskResult.saved);
       final task = taskNamed(container, 'Run');
@@ -107,10 +139,9 @@ void main() {
       final container = await createTestContainer();
       final home = defaultHomeGroup(container);
 
-      final result = await appNotifier(container).quickAddTask(
-        title: '   ',
-        groupId: home.id,
-      );
+      final result = await appNotifier(
+        container,
+      ).quickAddTask(title: '   ', groupId: home.id);
 
       expect(result, SaveTaskResult.saved);
       expect(tasksOf(container), isEmpty);
@@ -136,56 +167,61 @@ void main() {
       await addNamedTask(container, title: 'Vacuum', groupId: home.id);
       await addNamedTask(container, title: 'Mop', groupId: home.id);
       await addNamedTask(container, title: 'Run', groupId: workout.id);
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Vacuum').id,
-      );
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Run').id,
-      );
+      await appNotifier(
+        container,
+      ).toggleCompleted(taskNamed(container, 'Vacuum').id);
+      await appNotifier(
+        container,
+      ).toggleCompleted(taskNamed(container, 'Run').id);
 
       await appNotifier(container).clearCompletedInGroup(home.id);
 
-      expect(
-        tasksOf(container).map((task) => task.title),
-        ['Mop', 'Run'],
-      );
+      expect(tasksOf(container).map((task) => task.title), ['Mop', 'Run']);
     });
 
-    test('move to tomorrow saves and undo restores the previous due date',
-        () async {
-      final container = await createTestContainer();
-      await addNamedTask(
-        container,
-        title: 'Bins',
-        dueAt: DateTime(2026, 1, 1),
-      );
-      final before = taskNamed(container, 'Bins');
+    test(
+      'move to tomorrow saves and undo restores the previous due date',
+      () async {
+        final container = await createTestContainer();
+        await addNamedTask(
+          container,
+          title: 'Bins',
+          dueAt: DateTime(2026, 1, 1),
+        );
+        final before = taskNamed(container, 'Bins');
 
-      final changed = await appNotifier(container).moveDueToTomorrow(before.id);
+        final changed = await appNotifier(
+          container,
+        ).moveDueToTomorrow(before.id);
 
-      expect(changed, isTrue);
-      final moved = taskNamed(container, 'Bins');
-      final tomorrow = dateOnly(DateTime.now()).add(const Duration(days: 1));
-      expect(dateOnly(moved.dueAt!), tomorrow);
-      expect(moved.dueHasTime, isFalse);
-      expect(moved.reminderAt?.hour, AppConstants.defaultReminderHour);
+        expect(changed, isTrue);
+        final moved = taskNamed(container, 'Bins');
+        final tomorrow = dateOnly(DateTime.now()).add(const Duration(days: 1));
+        expect(dateOnly(moved.dueAt!), tomorrow);
+        expect(moved.dueHasTime, isFalse);
+        expect(moved.reminderAt?.hour, AppConstants.defaultReminderHour);
 
-      await appNotifier(container).restoreTask(before);
-      expect(taskNamed(container, 'Bins').dueAt, before.dueAt);
-    });
+        await appNotifier(container).restoreTask(before);
+        expect(taskNamed(container, 'Bins').dueAt, before.dueAt);
+      },
+    );
 
-    test('move to tomorrow does nothing when it is already due tomorrow',
-        () async {
-      final container = await createTestContainer();
-      final tomorrow = dateOnly(DateTime.now()).add(const Duration(days: 1));
-      await addNamedTask(container, title: 'Bins', dueAt: tomorrow);
-      final before = taskNamed(container, 'Bins');
+    test(
+      'move to tomorrow does nothing when it is already due tomorrow',
+      () async {
+        final container = await createTestContainer();
+        final tomorrow = dateOnly(DateTime.now()).add(const Duration(days: 1));
+        await addNamedTask(container, title: 'Bins', dueAt: tomorrow);
+        final before = taskNamed(container, 'Bins');
 
-      final changed = await appNotifier(container).moveDueToTomorrow(before.id);
+        final changed = await appNotifier(
+          container,
+        ).moveDueToTomorrow(before.id);
 
-      expect(changed, isFalse);
-      expect(taskNamed(container, 'Bins').dueAt, before.dueAt);
-    });
+        expect(changed, isFalse);
+        expect(taskNamed(container, 'Bins').dueAt, before.dueAt);
+      },
+    );
 
     test('moves overdue tasks to today and undo restores them', () async {
       final container = await createTestContainer();
@@ -212,9 +248,9 @@ void main() {
         dueAt: today,
       );
 
-      final previous = await appNotifier(container).moveOverdueToToday(
-        groupId: home.id,
-      );
+      final previous = await appNotifier(
+        container,
+      ).moveOverdueToToday(groupId: home.id);
 
       expect(previous.map((task) => task.title), ['Old']);
       final moved = taskNamed(container, 'Old');
@@ -225,10 +261,7 @@ void main() {
       expect(taskNamed(container, 'Run').dueAt, DateTime(2026, 1, 2));
 
       await appNotifier(container).restoreTasks(previous);
-      expect(
-        taskNamed(container, 'Old').dueAt,
-        DateTime(2026, 1, 1, 15, 30),
-      );
+      expect(taskNamed(container, 'Old').dueAt, DateTime(2026, 1, 1, 15, 30));
     });
   });
 }

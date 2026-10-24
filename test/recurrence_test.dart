@@ -40,14 +40,13 @@ void main() {
       kind: RecurrenceKind.weekly,
       weekdays: [DateTime.monday],
     );
-    expect(
-      recurrence.toggleWeekday(DateTime.monday).selectedWeekdays,
-      [DateTime.monday],
-    );
-    expect(
-      recurrence.toggleWeekday(DateTime.friday).selectedWeekdays,
-      [DateTime.monday, DateTime.friday],
-    );
+    expect(recurrence.toggleWeekday(DateTime.monday).selectedWeekdays, [
+      DateTime.monday,
+    ]);
+    expect(recurrence.toggleWeekday(DateTime.friday).selectedWeekdays, [
+      DateTime.monday,
+      DateTime.friday,
+    ]);
   });
 
   test('fromJson clamps huge or fractional interval days', () {
@@ -71,7 +70,7 @@ void main() {
     );
     expect(
       huge.nextDueAfter(DateTime(2026, 8, 17)),
-      DateTime(2026, 8, 17).add(const Duration(days: 3650)),
+      DateTime(2026, 8, 17 + 3650),
     );
   });
 

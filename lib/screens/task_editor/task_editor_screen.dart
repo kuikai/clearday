@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -13,11 +13,7 @@ import '../../widgets/task_editor_fields.dart';
 import '../paywall/paywall_screen.dart';
 
 class TaskEditorScreen extends ConsumerStatefulWidget {
-  const TaskEditorScreen({
-    super.key,
-    required this.task,
-    required this.isNew,
-  });
+  const TaskEditorScreen({super.key, required this.task, required this.isNew});
 
   final Task task;
   final bool isNew;
@@ -126,9 +122,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                     initialValue: groups.any((group) => group.id == _groupId)
                         ? _groupId
                         : groups.first.id,
-                    decoration: const InputDecoration(
-                      labelText: 'Group',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Group'),
                     items: [
                       for (final group in groups)
                         DropdownMenuItem(
@@ -173,14 +167,20 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                         ),
                       ProLock(
                         locked: !isPro,
-                        onLockedTap: () => showPaywall(context),
+                        onLockedTap: () => showPaywall(
+                          context,
+                          reason: PaywallReason.reminder,
+                        ),
                         child: EditorDateRow(
                           icon: Icons.notifications_outlined,
                           label: 'Reminder',
                           value: _reminderLabel(isPro),
                           onTap: isPro
                               ? _pickReminder
-                              : () => showPaywall(context),
+                              : () => showPaywall(
+                                  context,
+                                  reason: PaywallReason.reminder,
+                                ),
                           onClear: isPro && _reminderAt != null
                               ? _clearReminder
                               : null,
@@ -193,8 +193,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                             'Free reminders fire at the due date/time. '
                             'Pro unlocks a custom reminder.',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.55),
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.55,
+                              ),
                               height: 1.4,
                             ),
                           ),
@@ -206,7 +207,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                 RecurrenceCard(
                   recurrence: _recurrence,
                   enabled: isPro,
-                  onLockedTap: () => showPaywall(context),
+                  onLockedTap: () =>
+                      showPaywall(context, reason: PaywallReason.repeat),
                   onChanged: (value) => setState(() => _setRecurrence(value)),
                 ),
               ],
@@ -363,25 +365,22 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     if (isPro) {
       return;
     }
-    _reminderAt = defaultReminderFor(
-      dueAt: _dueAt,
-      dueHasTime: _dueHasTime,
-    );
+    _reminderAt = defaultReminderFor(dueAt: _dueAt, dueHasTime: _dueHasTime);
   }
 
   Future<void> _save() async {
     final groups = ref.read(groupsProvider);
     if (groups.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Create a group first.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Create a group first.')));
       return;
     }
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add a title first.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Add a title first.')));
       return;
     }
 
@@ -389,10 +388,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final isPro = ref.read(proProvider).isPro;
     final reminder = isPro
         ? _reminderAt
-        : defaultReminderFor(
-            dueAt: _dueAt,
-            dueHasTime: _dueHasTime,
-          );
+        : defaultReminderFor(dueAt: _dueAt, dueHasTime: _dueHasTime);
     final recurrence = isPro ? _recurrence : const Recurrence();
     final saved = widget.task.copyWith(
       groupId: _groupId,
@@ -406,17 +402,16 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       clearReminderAt: reminder == null,
     );
 
-    final result = await ref.read(appDataProvider.notifier).upsertTask(
-          saved,
-          isNew: widget.isNew,
-        );
+    final result = await ref
+        .read(appDataProvider.notifier)
+        .upsertTask(saved, isNew: widget.isNew);
     if (!mounted) {
       return;
     }
     setState(() => _saving = false);
 
     if (result == SaveTaskResult.blockedByTaskLimit) {
-      await showPaywall(context);
+      await showPaywall(context, reason: PaywallReason.tasks);
       return;
     }
     Navigator.of(context).pop();

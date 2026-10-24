@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-10-24
+- **Fixed** repeating reminders — a finished repeat still rings on its next reminder time
+- **Fixed** repeating due times — every few days keeps the same clock time when daylight saving changes
+- **Fixed** free task cap — unchecking or undoing a done task cannot pass 25 active tasks
+- **Fixed** task saves — a slower save can no longer overwrite a newer one
+- **Updated** paywall — the title matches the limit or Pro feature that opened it, and purchase success says groups
+- **Updated** limit banner and Settings — a full cap leads, and free Pro copy mentions repeats and custom reminders
 - **Updated** `pubspec.yaml` — Android version code 6, because Play already has version code 5
 - **Updated** Android release — Play billing permission, 16 KB native packaging, and native debug symbols in the app bundle
 - **Updated** reminder notifications — status-bar icon is a white check instead of the full launcher artwork

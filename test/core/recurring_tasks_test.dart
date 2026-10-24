@@ -4,41 +4,53 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/test_harness.dart';
 
+DateTime _calendarDaysAfter(DateTime from, int days) {
+  return DateTime(
+    from.year,
+    from.month,
+    from.day + days,
+    from.hour,
+    from.minute,
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Recurring tasks', () {
-    test('Pro: completing a recurring task keeps one task done until next due',
-        () async {
-      final container = await createTestContainer(isPro: true);
-      final now = DateTime.now();
-      final dueDay = DateTime(now.year, now.month, now.day, 9);
+    test(
+      'Pro: completing a recurring task keeps one task done until next due',
+      () async {
+        final container = await createTestContainer(isPro: true);
+        final now = DateTime.now();
+        final dueDay = DateTime(now.year, now.month, now.day, 9);
 
-      await addNamedTask(
-        container,
-        title: 'Water plants',
-        dueAt: dueDay,
-        dueHasTime: true,
-        recurrence: const Recurrence(
-          kind: RecurrenceKind.everyNDays,
-          intervalDays: 5,
-        ),
-      );
+        await addNamedTask(
+          container,
+          title: 'Water plants',
+          dueAt: dueDay,
+          dueHasTime: true,
+          recurrence: const Recurrence(
+            kind: RecurrenceKind.everyNDays,
+            intervalDays: 5,
+          ),
+        );
 
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Water plants').id,
-      );
+        await appNotifier(
+          container,
+        ).toggleCompleted(taskNamed(container, 'Water plants').id);
 
-      final tasks = tasksOf(container);
-      expect(tasks, hasLength(1));
+        final tasks = tasksOf(container);
+        expect(tasks, hasLength(1));
 
-      final task = tasks.single;
-      expect(task.isCompleted, isTrue);
-      expect(task.title, 'Water plants');
-      // From completion day (today), not from any future stored due.
-      expect(task.dueAt, dueDay.add(const Duration(days: 5)));
-      expect(task.recurrence.kind, RecurrenceKind.everyNDays);
-    });
+        final task = tasks.single;
+        expect(task.isCompleted, isTrue);
+        expect(task.title, 'Water plants');
+        // From completion day (today), not from any future stored due.
+        expect(task.dueAt, _calendarDaysAfter(dueDay, 5));
+        expect(task.recurrence.kind, RecurrenceKind.everyNDays);
+      },
+    );
 
     test('undo restores the due date of a recurring task', () async {
       final container = await createTestContainer(isPro: true);
@@ -65,98 +77,104 @@ void main() {
       expect(task.dueAt, dueDay);
     });
 
-    test('Pro: completing twice the same day does not keep adding interval days',
-        () async {
-      final container = await createTestContainer(isPro: true);
-      final now = DateTime.now();
-      final dueDay = DateTime(now.year, now.month, now.day, 9);
+    test(
+      'Pro: completing twice the same day does not keep adding interval days',
+      () async {
+        final container = await createTestContainer(isPro: true);
+        final now = DateTime.now();
+        final dueDay = DateTime(now.year, now.month, now.day, 9);
 
-      await addNamedTask(
-        container,
-        title: 'Daily chore',
-        dueAt: dueDay,
-        dueHasTime: true,
-        recurrence: const Recurrence(
-          kind: RecurrenceKind.everyNDays,
-          intervalDays: 1,
-        ),
-      );
-
-      final taskId = taskNamed(container, 'Daily chore').id;
-      await appNotifier(container).toggleCompleted(taskId);
-      final firstDue = taskNamed(container, 'Daily chore').dueAt;
-
-      // Uncheck then complete again the same day.
-      await appNotifier(container).toggleCompleted(taskId);
-      await appNotifier(container).toggleCompleted(taskId);
-      final secondDue = taskNamed(container, 'Daily chore').dueAt;
-
-      expect(firstDue, dueDay.add(const Duration(days: 1)));
-      expect(secondDue, firstDue);
-    });
-
-    test('Pro: reactivation opens the same task when next due arrives',
-        () async {
-      final container = await createTestContainer(isPro: true);
-      final due = DateTime(2026, 8, 17, 9);
-
-      await addNamedTask(
-        container,
-        title: 'Water plants',
-        dueAt: due,
-        dueHasTime: true,
-        recurrence: const Recurrence(
-          kind: RecurrenceKind.everyNDays,
-          intervalDays: 5,
-        ),
-      );
-
-      final taskId = taskNamed(container, 'Water plants').id;
-      await appNotifier(container).toggleCompleted(taskId);
-
-      // Simulate that the next due day has arrived.
-      final scheduled = taskNamed(container, 'Water plants');
-      await appNotifier(container).upsertTask(
-        scheduled.copyWith(
-          dueAt: DateTime.now(),
+        await addNamedTask(
+          container,
+          title: 'Daily chore',
+          dueAt: dueDay,
           dueHasTime: true,
-          isCompleted: true,
-          completedAt: DateTime.now(),
-        ),
-        isNew: false,
-      );
+          recurrence: const Recurrence(
+            kind: RecurrenceKind.everyNDays,
+            intervalDays: 1,
+          ),
+        );
 
-      await appNotifier(container).reactivateRecurringTasks();
+        final taskId = taskNamed(container, 'Daily chore').id;
+        await appNotifier(container).toggleCompleted(taskId);
+        final firstDue = taskNamed(container, 'Daily chore').dueAt;
 
-      final reopened = taskNamed(container, 'Water plants');
-      expect(reopened.isCompleted, isFalse);
-      expect(tasksOf(container), hasLength(1));
-    });
+        // Uncheck then complete again the same day.
+        await appNotifier(container).toggleCompleted(taskId);
+        await appNotifier(container).toggleCompleted(taskId);
+        final secondDue = taskNamed(container, 'Daily chore').dueAt;
 
-    test('Pro: overdue complete schedules next due from now, not old due',
-        () async {
-      final container = await createTestContainer(isPro: true);
-      final overdueDue = DateTime(2026, 1, 1, 9);
+        expect(firstDue, _calendarDaysAfter(dueDay, 1));
+        expect(secondDue, firstDue);
+      },
+    );
 
-      await addNamedTask(
-        container,
-        title: 'Water plants',
-        dueAt: overdueDue,
-        dueHasTime: true,
-        recurrence: const Recurrence(
-          kind: RecurrenceKind.everyNDays,
-          intervalDays: 5,
-        ),
-      );
+    test(
+      'Pro: reactivation opens the same task when next due arrives',
+      () async {
+        final container = await createTestContainer(isPro: true);
+        final due = DateTime(2026, 8, 17, 9);
 
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Water plants').id,
-      );
+        await addNamedTask(
+          container,
+          title: 'Water plants',
+          dueAt: due,
+          dueHasTime: true,
+          recurrence: const Recurrence(
+            kind: RecurrenceKind.everyNDays,
+            intervalDays: 5,
+          ),
+        );
 
-      final task = taskNamed(container, 'Water plants');
-      expect(task.isCompleted, isTrue);
-      expect(task.dueAt!.isAfter(DateTime.now()), isTrue);
-    });
+        final taskId = taskNamed(container, 'Water plants').id;
+        await appNotifier(container).toggleCompleted(taskId);
+
+        // Simulate that the next due day has arrived.
+        final scheduled = taskNamed(container, 'Water plants');
+        await appNotifier(container).upsertTask(
+          scheduled.copyWith(
+            dueAt: DateTime.now(),
+            dueHasTime: true,
+            isCompleted: true,
+            completedAt: DateTime.now(),
+          ),
+          isNew: false,
+        );
+
+        await appNotifier(container).reactivateRecurringTasks();
+
+        final reopened = taskNamed(container, 'Water plants');
+        expect(reopened.isCompleted, isFalse);
+        expect(tasksOf(container), hasLength(1));
+      },
+    );
+
+    test(
+      'Pro: overdue complete schedules next due from now, not old due',
+      () async {
+        final container = await createTestContainer(isPro: true);
+        final overdueDue = DateTime(2026, 1, 1, 9);
+
+        await addNamedTask(
+          container,
+          title: 'Water plants',
+          dueAt: overdueDue,
+          dueHasTime: true,
+          recurrence: const Recurrence(
+            kind: RecurrenceKind.everyNDays,
+            intervalDays: 5,
+          ),
+        );
+
+        await appNotifier(
+          container,
+        ).toggleCompleted(taskNamed(container, 'Water plants').id);
+
+        final task = taskNamed(container, 'Water plants');
+        expect(task.isCompleted, isTrue);
+        expect(task.dueAt!.isAfter(DateTime.now()), isTrue);
+      },
+    );
 
     test('Pro: every few days with no due date starts today', () async {
       final container = await createTestContainer(isPro: true);
@@ -176,66 +194,69 @@ void main() {
       expect(task.isCompleted, isFalse);
     });
 
-    test('clear completed keeps a repeat that is waiting for its next date',
-        () async {
-      final container = await createTestContainer(isPro: true);
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day, 9);
+    test(
+      'clear completed keeps a repeat that is waiting for its next date',
+      () async {
+        final container = await createTestContainer(isPro: true);
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day, 9);
 
-      await addNamedTask(
-        container,
-        title: 'Water plants',
-        dueAt: today,
-        dueHasTime: true,
-        recurrence: const Recurrence(
-          kind: RecurrenceKind.everyNDays,
-          intervalDays: 5,
-        ),
-      );
-      await addNamedTask(
-        container,
-        title: 'One time',
-        dueAt: today,
-      );
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Water plants').id,
-      );
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'One time').id,
-      );
+        await addNamedTask(
+          container,
+          title: 'Water plants',
+          dueAt: today,
+          dueHasTime: true,
+          recurrence: const Recurrence(
+            kind: RecurrenceKind.everyNDays,
+            intervalDays: 5,
+          ),
+        );
+        await addNamedTask(container, title: 'One time', dueAt: today);
+        await appNotifier(
+          container,
+        ).toggleCompleted(taskNamed(container, 'Water plants').id);
+        await appNotifier(
+          container,
+        ).toggleCompleted(taskNamed(container, 'One time').id);
 
-      await appNotifier(container).clearCompletedInGroup(
-        defaultHomeGroup(container).id,
-      );
+        await appNotifier(
+          container,
+        ).clearCompletedInGroup(defaultHomeGroup(container).id);
 
-      expect(tasksOf(container).map((task) => task.title), ['Water plants']);
-      expect(taskNamed(container, 'Water plants').isCompleted, isTrue);
-    });
+        expect(tasksOf(container).map((task) => task.title), ['Water plants']);
+        expect(taskNamed(container, 'Water plants').isCompleted, isTrue);
+      },
+    );
 
-    test('free: recurrence is stripped on save and stays a single done task',
-        () async {
-      final container = await createTestContainer();
-      final due = DateTime(2026, 8, 17, 9);
+    test(
+      'free: recurrence is stripped on save and stays a single done task',
+      () async {
+        final container = await createTestContainer();
+        final due = DateTime(2026, 8, 17, 9);
 
-      await addNamedTask(
-        container,
-        title: 'Water plants',
-        dueAt: due,
-        dueHasTime: true,
-        recurrence: const Recurrence(
-          kind: RecurrenceKind.everyNDays,
-          intervalDays: 5,
-        ),
-      );
+        await addNamedTask(
+          container,
+          title: 'Water plants',
+          dueAt: due,
+          dueHasTime: true,
+          recurrence: const Recurrence(
+            kind: RecurrenceKind.everyNDays,
+            intervalDays: 5,
+          ),
+        );
 
-      expect(taskNamed(container, 'Water plants').recurrence.isEnabled, isFalse);
+        expect(
+          taskNamed(container, 'Water plants').recurrence.isEnabled,
+          isFalse,
+        );
 
-      await appNotifier(container).toggleCompleted(
-        taskNamed(container, 'Water plants').id,
-      );
+        await appNotifier(
+          container,
+        ).toggleCompleted(taskNamed(container, 'Water plants').id);
 
-      expect(tasksOf(container), hasLength(1));
-      expect(tasksOf(container).single.isCompleted, isTrue);
-    });
+        expect(tasksOf(container), hasLength(1));
+        expect(tasksOf(container).single.isCompleted, isTrue);
+      },
+    );
   });
 }

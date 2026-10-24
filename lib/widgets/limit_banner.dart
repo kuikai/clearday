@@ -18,21 +18,39 @@ class LimitBanner extends ConsumerWidget {
     }
 
     final data = ref.watch(appDataProvider);
+    return _banner(
+      context,
+      activeTasks: data.activeTaskCount,
+      groups: data.topLevelGroupCount,
+      subgroups: data.subgroupCount,
+    );
+  }
+
+  Widget _banner(
+    BuildContext context, {
+    required int activeTasks,
+    required int groups,
+    required int subgroups,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final taskLabel =
-        '${data.activeTaskCount} of ${AppConstants.freeActiveTaskLimit} free tasks';
-    final groupLabel =
-        '${data.topLevelGroupCount} of ${AppConstants.freeGroupLimit} groups';
-    final subgroupLabel =
-        '${data.subgroupCount} of ${AppConstants.freeSubgroupLimit} subgroups';
+    final summary = _freeLimitBannerText(
+      activeTasks: activeTasks,
+      groups: groups,
+      subgroups: subgroups,
+    );
+    final reason = _paywallReasonForLimits(
+      activeTasks: activeTasks,
+      groups: groups,
+      subgroups: subgroups,
+    );
 
     return Material(
       color: colorScheme.primaryContainer.withValues(alpha: 0.55),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => showPaywall(context),
+        onTap: () => showPaywall(context, reason: reason),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Padding(
@@ -43,7 +61,7 @@ class LimitBanner extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    '$taskLabel · $groupLabel · $subgroupLabel',
+                    summary,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       height: 1.3,
@@ -65,4 +83,52 @@ class LimitBanner extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _LimitPart {
+  const _LimitPart({required this.full, required this.label});
+
+  final bool full;
+  final String label;
+}
+
+String _freeLimitBannerText({
+  required int activeTasks,
+  required int groups,
+  required int subgroups,
+}) {
+  final parts = [
+    _LimitPart(
+      full: activeTasks >= AppConstants.freeActiveTaskLimit,
+      label: '$activeTasks of ${AppConstants.freeActiveTaskLimit} free tasks',
+    ),
+    _LimitPart(
+      full: groups >= AppConstants.freeGroupLimit,
+      label: '$groups of ${AppConstants.freeGroupLimit} groups',
+    ),
+    _LimitPart(
+      full: subgroups >= AppConstants.freeSubgroupLimit,
+      label: '$subgroups of ${AppConstants.freeSubgroupLimit} subgroups',
+    ),
+  ];
+  final full = parts.where((part) => part.full);
+  final open = parts.where((part) => !part.full);
+  return [...full, ...open].map((part) => part.label).join(' · ');
+}
+
+PaywallReason _paywallReasonForLimits({
+  required int activeTasks,
+  required int groups,
+  required int subgroups,
+}) {
+  if (activeTasks >= AppConstants.freeActiveTaskLimit) {
+    return PaywallReason.tasks;
+  }
+  if (groups >= AppConstants.freeGroupLimit) {
+    return PaywallReason.groups;
+  }
+  if (subgroups >= AppConstants.freeSubgroupLimit) {
+    return PaywallReason.subgroups;
+  }
+  return PaywallReason.general;
 }

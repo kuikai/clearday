@@ -101,11 +101,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
     );
   }
 
-  Widget _groupPicker(
-    AppData data,
-    List<TaskGroup> groups,
-    TextStyle? muted,
-  ) {
+  Widget _groupPicker(AppData data, List<TaskGroup> groups, TextStyle? muted) {
     final selectedId = _selectedGroupId(data, groups);
     return Row(
       children: [
@@ -158,7 +154,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
     final notifier = ref.read(appDataProvider.notifier);
     if (!notifier.canAddTask) {
       if (mounted) {
-        await showPaywall(context);
+        await showPaywall(context, reason: PaywallReason.tasks);
       }
       return;
     }
@@ -175,7 +171,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
     }
     setState(() => _saving = false);
     if (result == SaveTaskResult.blockedByTaskLimit) {
-      await showPaywall(context);
+      await showPaywall(context, reason: PaywallReason.tasks);
       return;
     }
     if (ref.read(appDataProvider).tasks.length == beforeCount) {
@@ -194,7 +190,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
     if (data.groups.isEmpty) {
       if (!notifier.canAddGroup) {
         setState(() => _saving = false);
-        await showPaywall(context);
+        await showPaywall(context, reason: PaywallReason.groups);
         return null;
       }
       await notifier.addGroup(AppConstants.defaultGroupName);

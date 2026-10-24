@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../core/task_schedule.dart';
 import '../models/task.dart';
 
 /// Schedules local reminders for tasks with a future reminder time.
@@ -30,8 +31,9 @@ class NotificationService {
       tz_data.initializeTimeZones();
       await _configureLocalTimeZone();
 
-      const androidSettings =
-          AndroidInitializationSettings('@drawable/ic_notification');
+      const androidSettings = AndroidInitializationSettings(
+        '@drawable/ic_notification',
+      );
       const darwinSettings = DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -70,16 +72,20 @@ class NotificationService {
 
       if (defaultTargetPlatform == TargetPlatform.android) {
         final status = await Permission.notification.request();
-        final android = _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        final android = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
         await android?.requestNotificationsPermission();
         await android?.requestExactAlarmsPermission();
         return status.isGranted || status.isLimited;
       }
 
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        final ios = _plugin.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
+        final ios = _plugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
         final granted = await ios?.requestPermissions(
           alert: true,
           badge: true,
@@ -103,8 +109,7 @@ class NotificationService {
       await _plugin.cancelAll();
       final now = DateTime.now();
       for (final task in tasks) {
-        final reminder = task.reminderAt;
-        if (task.isCompleted || reminder == null || !reminder.isAfter(now)) {
+        if (!shouldScheduleReminder(task, now)) {
           continue;
         }
         await _schedule(task);
@@ -173,8 +178,10 @@ class NotificationService {
   }
 
   Future<void> _createAndroidChannel() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await android?.createNotificationChannel(
       const AndroidNotificationChannel(
         _channelId,

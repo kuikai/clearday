@@ -10,14 +10,35 @@ Future<void> copyGroupAction(
   WidgetRef ref,
   String groupId,
 ) async {
-  final result = await ref.read(appDataProvider.notifier).copyGroup(groupId);
+  final notifier = ref.read(appDataProvider.notifier);
+  final result = await notifier.copyGroup(groupId);
   if (!context.mounted) {
     return;
   }
-  if (result == SaveTaskResult.blockedByGroupLimit ||
-      result == SaveTaskResult.blockedByTaskLimit) {
-    await showPaywall(context);
+  final reason = _copyBlockReason(ref, groupId, result);
+  if (reason == null) {
+    return;
   }
+  await showPaywall(context, reason: reason);
+}
+
+PaywallReason? _copyBlockReason(
+  WidgetRef ref,
+  String groupId,
+  SaveTaskResult result,
+) {
+  if (result == SaveTaskResult.blockedByTaskLimit) {
+    return PaywallReason.tasks;
+  }
+  if (result != SaveTaskResult.blockedByGroupLimit) {
+    return null;
+  }
+  final source = ref.read(appDataProvider).groupById(groupId);
+  final canAddGroup = ref.read(appDataProvider.notifier).canAddGroup;
+  if (source != null && source.isTopLevel && !canAddGroup) {
+    return PaywallReason.groups;
+  }
+  return PaywallReason.subgroups;
 }
 
 Future<void> renameGroupAction(

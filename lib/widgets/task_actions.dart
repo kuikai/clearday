@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/task.dart';
 import '../providers/tasks_provider.dart';
+import '../screens/paywall/paywall_screen.dart';
 import '../screens/task_editor/task_editor_screen.dart';
 
 Future<void> openTaskEditor(BuildContext context, Task task) {
@@ -19,15 +20,30 @@ Future<void> toggleTaskWithUndo(
   Task task,
 ) async {
   final notifier = ref.read(appDataProvider.notifier);
-  await notifier.toggleCompleted(task.id);
+  final result = await notifier.toggleCompleted(task.id);
   if (!context.mounted) {
+    return;
+  }
+  if (result == SaveTaskResult.blockedByTaskLimit) {
+    await showPaywall(context, reason: PaywallReason.tasks);
     return;
   }
   showUndoNotice(
     context,
     message: task.isCompleted ? 'Marked not done' : 'Marked done',
-    onUndo: () => notifier.restoreTask(task),
+    onUndo: () => _restoreWithPaywall(context, notifier, [task]),
   );
+}
+
+Future<void> _restoreWithPaywall(
+  BuildContext context,
+  AppDataNotifier notifier,
+  List<Task> snapshots,
+) async {
+  final result = await notifier.restoreTasks(snapshots);
+  if (result == SaveTaskResult.blockedByTaskLimit && context.mounted) {
+    await showPaywall(context, reason: PaywallReason.tasks);
+  }
 }
 
 Future<void> moveTaskToTomorrowWithUndo(
@@ -43,7 +59,7 @@ Future<void> moveTaskToTomorrowWithUndo(
   showUndoNotice(
     context,
     message: 'Due tomorrow',
-    onUndo: () => notifier.restoreTask(task),
+    onUndo: () => _restoreWithPaywall(context, notifier, [task]),
   );
 }
 
@@ -63,7 +79,7 @@ Future<void> moveOverdueToTodayWithUndo(
   showUndoNotice(
     context,
     message: label,
-    onUndo: () => notifier.restoreTasks(previous),
+    onUndo: () => _restoreWithPaywall(context, notifier, previous),
   );
 }
 

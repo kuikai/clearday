@@ -108,10 +108,7 @@ void main() {
   });
 
   test('an undated repeat gets today as its first due date', () {
-    const repeat = Recurrence(
-      kind: RecurrenceKind.everyNDays,
-      intervalDays: 5,
-    );
+    const repeat = Recurrence(kind: RecurrenceKind.everyNDays, intervalDays: 5);
     final prepared = prepareRecurringTask(
       task().copyWith(recurrence: repeat),
       now,
@@ -136,11 +133,56 @@ void main() {
     expect(identical(prepareRecurringTask(waiting, now), waiting), isTrue);
   });
 
-  test('a finished repeat reopens when its next date is today', () {
-    const repeat = Recurrence(
-      kind: RecurrenceKind.everyNDays,
-      intervalDays: 3,
+  test('a finished repeat with a future reminder still rings', () {
+    const repeat = Recurrence(kind: RecurrenceKind.everyNDays, intervalDays: 5);
+    final scheduled = shouldScheduleReminder(
+      task(
+        dueAt: DateTime(2026, 8, 24),
+        reminderAt: DateTime(2026, 8, 24, 9),
+        completed: true,
+      ).copyWith(recurrence: repeat),
+      now,
     );
+
+    expect(scheduled, isTrue);
+  });
+
+  test('a finished one-off does not ring', () {
+    expect(
+      shouldScheduleReminder(
+        task(reminderAt: DateTime(2026, 8, 18, 9), completed: true),
+        now,
+      ),
+      isFalse,
+    );
+  });
+
+  test('an open task with a future reminder rings', () {
+    expect(
+      shouldScheduleReminder(task(reminderAt: DateTime(2026, 8, 18, 9)), now),
+      isTrue,
+    );
+  });
+
+  test('a reminder that already passed is not scheduled', () {
+    expect(
+      shouldScheduleReminder(task(reminderAt: DateTime(2026, 8, 17, 9)), now),
+      isFalse,
+    );
+    expect(shouldScheduleReminder(task(), now), isFalse);
+  });
+
+  test('restoring a done task counts it as active again', () {
+    final done = task(id: 'done', completed: true);
+    final open = task(id: 'open');
+    final restored = done.copyWith(isCompleted: false, clearCompletedAt: true);
+
+    expect(activeCountAfterRestore([done, open], [restored]), 2);
+    expect(activeCountAfterRestore([done, open], [done]), 1);
+  });
+
+  test('a finished repeat reopens when its next date is today', () {
+    const repeat = Recurrence(kind: RecurrenceKind.everyNDays, intervalDays: 3);
     final prepared = prepareRecurringTask(
       task(
         dueAt: DateTime(2026, 8, 17, 9),

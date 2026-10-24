@@ -62,8 +62,7 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   static const double _splitBreakpoint = 720;
-  static const EdgeInsets _panePadding =
-      EdgeInsets.fromLTRB(16, 8, 16, 160);
+  static const EdgeInsets _panePadding = EdgeInsets.fromLTRB(16, 8, 16, 160);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -79,9 +78,7 @@ class HomeScreen extends ConsumerWidget {
             tooltip: 'Settings',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const SettingsScreen(),
-                ),
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
               );
             },
             icon: const Icon(Icons.settings_outlined),
@@ -175,16 +172,12 @@ class HomeScreen extends ConsumerWidget {
         ),
         VerticalDivider(
           width: 1,
-          color: Theme.of(context)
-              .colorScheme
-              .outlineVariant
-              .withValues(alpha: 0.6),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.6),
         ),
         Expanded(
-          child: ListView(
-            padding: _panePadding,
-            children: [today],
-          ),
+          child: ListView(padding: _panePadding, children: [today]),
         ),
       ],
     );
@@ -214,11 +207,9 @@ class HomeScreen extends ConsumerWidget {
       header: header,
       itemCount: groups.length,
       onReorder: (oldIndex, newIndex) {
-        ref.read(appDataProvider.notifier).reorderSiblings(
-              null,
-              oldIndex,
-              newIndex,
-            );
+        ref
+            .read(appDataProvider.notifier)
+            .reorderSiblings(null, oldIndex, newIndex);
       },
       empty: EmptyState(
         title: 'No groups yet',
@@ -271,14 +262,14 @@ class HomeScreen extends ConsumerWidget {
   Future<void> _addTask(BuildContext context, WidgetRef ref) async {
     final notifier = ref.read(appDataProvider.notifier);
     if (!notifier.canAddTask) {
-      await showPaywall(context);
+      await showPaywall(context, reason: PaywallReason.tasks);
       return;
     }
 
     var data = ref.read(appDataProvider);
     if (data.groups.isEmpty) {
       if (!notifier.canAddGroup) {
-        await showPaywall(context);
+        await showPaywall(context, reason: PaywallReason.groups);
         return;
       }
       await notifier.addGroup(AppConstants.defaultGroupName);
@@ -329,10 +320,14 @@ class HomeScreen extends ConsumerWidget {
     String? parentId,
   }) async {
     final notifier = ref.read(appDataProvider.notifier);
-    final allowed =
-        parentId == null ? notifier.canAddGroup : notifier.canAddSubgroup;
+    final reason = parentId == null
+        ? PaywallReason.groups
+        : PaywallReason.subgroups;
+    final allowed = parentId == null
+        ? notifier.canAddGroup
+        : notifier.canAddSubgroup;
     if (!allowed) {
-      await showPaywall(context);
+      await showPaywall(context, reason: reason);
       return;
     }
 
@@ -343,7 +338,7 @@ class HomeScreen extends ConsumerWidget {
 
     final result = await notifier.addGroup(name, parentId: parentId);
     if (result == SaveTaskResult.blockedByGroupLimit && context.mounted) {
-      await showPaywall(context);
+      await showPaywall(context, reason: reason);
       return;
     }
     if (!context.mounted) {
@@ -400,12 +395,7 @@ class HomeScreen extends ConsumerWidget {
     WidgetRef ref,
     TaskGroup group,
   ) {
-    return deleteGroupAction(
-      context,
-      ref,
-      group.id,
-      name: group.name,
-    );
+    return deleteGroupAction(context, ref, group.id, name: group.name);
   }
 }
 

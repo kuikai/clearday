@@ -36,7 +36,7 @@ final groupsProvider = Provider<List<TaskGroup>>((ref) {
 
 class AppDataNotifier extends StateNotifier<AppData> {
   AppDataNotifier(this._storage, this._notifications, this._ref)
-      : super(_storage.loadAppData()) {
+    : super(_storage.loadAppData()) {
     if (!_storage.loadCorrupt) {
       _persist();
     }
@@ -48,7 +48,8 @@ class AppDataNotifier extends StateNotifier<AppData> {
   final NotificationService _notifications;
   final Ref _ref;
   static const _uuid = Uuid();
-  Future<void> _reminderSync = Future.value();
+  Future<void> _persistChain = Future<void>.value();
+  Future<void> _reminderSync = Future<void>.value();
 
   bool get isPro => _ref.read(proProvider).isPro;
 
@@ -65,8 +66,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
     if (isPro) {
       return AppConstants.freeActiveTaskLimit;
     }
-    final remaining =
-        AppConstants.freeActiveTaskLimit - state.activeTaskCount;
+    final remaining = AppConstants.freeActiveTaskLimit - state.activeTaskCount;
     return remaining < 0 ? 0 : remaining;
   }
 
@@ -110,7 +110,8 @@ class AppDataNotifier extends StateNotifier<AppData> {
     }
     final groups = state.groups
         .map(
-          (group) => group.id == groupId ? group.copyWith(name: trimmed) : group,
+          (group) =>
+              group.id == groupId ? group.copyWith(name: trimmed) : group,
         )
         .toList();
     state = state.copyWith(groups: groups);
@@ -144,8 +145,9 @@ class AppDataNotifier extends StateNotifier<AppData> {
       }
     }
 
-    final tasksToCopy =
-        state.tasks.where((task) => sourceIds.contains(task.groupId)).toList();
+    final tasksToCopy = state.tasks
+        .where((task) => sourceIds.contains(task.groupId))
+        .toList();
     if (!isPro &&
         state.activeTaskCount + tasksToCopy.length >
             AppConstants.freeActiveTaskLimit) {
@@ -153,9 +155,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
     }
 
     final now = DateTime.now();
-    final idMap = <String, String>{
-      for (final id in sourceIds) id: _uuid.v4(),
-    };
+    final idMap = <String, String>{for (final id in sourceIds) id: _uuid.v4()};
 
     final newGroups = <TaskGroup>[];
     final visited = <String>{};
@@ -211,18 +211,16 @@ class AppDataNotifier extends StateNotifier<AppData> {
 
   Future<void> deleteGroup(String groupId) async {
     final ids = state.descendantGroupIds(groupId);
-    final groups =
-        state.groups.where((group) => !ids.contains(group.id)).toList();
-    final tasks =
-        state.tasks.where((task) => !ids.contains(task.groupId)).toList();
+    final groups = state.groups
+        .where((group) => !ids.contains(group.id))
+        .toList();
+    final tasks = state.tasks
+        .where((task) => !ids.contains(task.groupId))
+        .toList();
     final selectedId = ids.contains(state.selectedGroupId)
         ? (groups.isNotEmpty ? groups.first.id : '')
         : state.selectedGroupId;
-    state = AppData(
-      groups: groups,
-      tasks: tasks,
-      selectedGroupId: selectedId,
-    );
+    state = AppData(groups: groups, tasks: tasks, selectedGroupId: selectedId);
     await _persist();
     await _syncReminders();
   }
@@ -253,26 +251,30 @@ class AppDataNotifier extends StateNotifier<AppData> {
     return SaveTaskResult.saved;
   }
 
-  Future<void> toggleCompleted(String taskId) async {
+  Future<SaveTaskResult> toggleCompleted(String taskId) async {
     await _reactivateRecurringTasks();
 
     final index = state.tasks.indexWhere((task) => task.id == taskId);
     if (index < 0) {
-      return;
+      return SaveTaskResult.saved;
     }
 
     final task = state.tasks[index];
     if (task.isCompleted) {
+      if (_restoreExceedsActiveLimit([_reopened(task)])) {
+        return SaveTaskResult.blockedByTaskLimit;
+      }
       await _setCompleted(task, completed: false);
-      return;
+      return SaveTaskResult.saved;
     }
 
     if (isPro && task.recurrence.isEnabled) {
       await _completeRecurringTask(task);
-      return;
+      return SaveTaskResult.saved;
     }
 
     await _setCompleted(task, completed: true);
+    return SaveTaskResult.saved;
   }
 
   Future<void> resyncReminders() async {
@@ -288,17 +290,24 @@ class AppDataNotifier extends StateNotifier<AppData> {
     await _syncReminders();
   }
 
-  Future<void> reorderSiblings(String? parentId, int oldIndex, int newIndex) async {
+  Future<void> reorderSiblings(
+    String? parentId,
+    int oldIndex,
+    int newIndex,
+  ) async {
     final next = state.withSiblingsReordered(parentId, oldIndex, newIndex);
     if (identical(next, state)) return;
     state = next;
     await _persist();
   }
 
-  Future<void> restoreTask(Task task) => restoreTasks([task]);
+  Future<SaveTaskResult> restoreTask(Task task) => restoreTasks([task]);
 
-  Future<void> restoreTasks(List<Task> snapshots) async {
-    if (snapshots.isEmpty) return;
+  Future<SaveTaskResult> restoreTasks(List<Task> snapshots) async {
+    if (snapshots.isEmpty) return SaveTaskResult.saved;
+    if (_restoreExceedsActiveLimit(snapshots)) {
+      return SaveTaskResult.blockedByTaskLimit;
+    }
     final pending = {for (final task in snapshots) task.id: task};
     final tasks = [
       for (final task in state.tasks) pending.remove(task.id) ?? task,
@@ -307,6 +316,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
     state = state.copyWith(tasks: tasks);
     await _persist();
     await _syncReminders();
+    return SaveTaskResult.saved;
   }
 
   Future<void> clearCompletedInGroup(String groupId) async {
@@ -414,10 +424,7 @@ class AppDataNotifier extends StateNotifier<AppData> {
         ? task.dueAt!.difference(task.reminderAt!)
         : null;
     final nextReminder = offset == null
-        ? defaultReminderFor(
-            dueAt: nextDue,
-            dueHasTime: task.dueHasTime,
-          )
+        ? defaultReminderFor(dueAt: nextDue, dueHasTime: task.dueHasTime)
         : nextDue.subtract(offset);
 
     final updated = task.copyWith(
@@ -481,18 +488,38 @@ class AppDataNotifier extends StateNotifier<AppData> {
     await _notifications.requestPermission();
   }
 
-  Future<void> _persist() async {
-    await _storage.saveAppData(state);
+  bool _restoreExceedsActiveLimit(List<Task> snapshots) {
+    if (isPro) {
+      return false;
+    }
+    final nextActive = activeCountAfterRestore(state.tasks, snapshots);
+    return nextActive > state.activeTaskCount &&
+        nextActive > AppConstants.freeActiveTaskLimit;
+  }
+
+  Task _reopened(Task task) {
+    return task.copyWith(isCompleted: false, clearCompletedAt: true);
+  }
+
+  /// Queues [state] behind earlier saves so an older snapshot cannot finish last.
+  Future<void> _persist() {
+    final snapshot = state;
+    _persistChain = _persistChain
+        .then((_) => _storage.saveAppData(snapshot))
+        .catchError((_) {});
+    return _persistChain;
   }
 
   Future<void> _syncReminders() {
-    _reminderSync = _reminderSync.then((_) async {
-      if (!_ref.read(settingsProvider).notificationsEnabled) {
-        await _notifications.syncTaskReminders(const []);
-        return;
-      }
-      await _notifications.syncTaskReminders(state.tasks);
-    }).catchError((_) {});
+    _reminderSync = _reminderSync
+        .then((_) async {
+          if (!_ref.read(settingsProvider).notificationsEnabled) {
+            await _notifications.syncTaskReminders(const []);
+            return;
+          }
+          await _notifications.syncTaskReminders(state.tasks);
+        })
+        .catchError((_) {});
     return _reminderSync;
   }
 }

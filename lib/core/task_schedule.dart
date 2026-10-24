@@ -1,6 +1,36 @@
 import '../models/task.dart';
 import 'date_utils.dart';
 
+/// True when [task] should get a local reminder at [now].
+///
+/// A finished one-off stays quiet. A finished repeat still rings when its
+/// next reminder is in the future.
+bool shouldScheduleReminder(Task task, DateTime now) {
+  final reminder = task.reminderAt;
+  if (reminder == null || !reminder.isAfter(now)) {
+    return false;
+  }
+  return !task.isCompleted || task.recurrence.isEnabled;
+}
+
+/// Active tasks after [snapshots] replace tasks that share an id.
+int activeCountAfterRestore(List<Task> tasks, List<Task> snapshots) {
+  final pending = {for (final task in snapshots) task.id: task};
+  var active = 0;
+  for (final task in tasks) {
+    final next = pending.remove(task.id) ?? task;
+    if (!next.isCompleted) {
+      active += 1;
+    }
+  }
+  for (final extra in pending.values) {
+    if (!extra.isCompleted) {
+      active += 1;
+    }
+  }
+  return active;
+}
+
 /// True when a finished repeating task is waiting for a future due date.
 bool isWaitingToRepeat(Task task, DateTime now) {
   final due = task.dueAt;
@@ -15,10 +45,7 @@ Task taskWithFirstRepeatDue(Task task, DateTime today) {
   if (!task.recurrence.isEnabled || task.dueAt != null) {
     return task;
   }
-  return task.copyWith(
-    dueAt: dateOnly(today),
-    dueHasTime: false,
-  );
+  return task.copyWith(dueAt: dateOnly(today), dueHasTime: false);
 }
 
 /// Fills a missing first due date, then reopens a repeat whose day has arrived.
@@ -34,10 +61,7 @@ Task _reopenRecurringTask(Task task, DateTime now) {
       isAfterToday(due, now)) {
     return task;
   }
-  return task.copyWith(
-    isCompleted: false,
-    clearCompletedAt: true,
-  );
+  return task.copyWith(isCompleted: false, clearCompletedAt: true);
 }
 
 /// A copy of [task] due the day after [now], or null when it should stay put.

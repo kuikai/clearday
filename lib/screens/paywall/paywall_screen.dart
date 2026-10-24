@@ -5,17 +5,49 @@ import '../../core/constants/app_constants.dart';
 import '../../providers/pro_provider.dart';
 import '../../services/revenue_cat_service.dart';
 
-Future<void> showPaywall(BuildContext context) {
+/// Why the paywall opened. [general] is the Settings and banner default.
+enum PaywallReason {
+  general,
+  tasks,
+  groups,
+  subgroups,
+  repeat,
+  reminder;
+
+  String get headline {
+    switch (this) {
+      case PaywallReason.general:
+        return 'Unlock Full Access';
+      case PaywallReason.tasks:
+        return 'You\'ve used all ${AppConstants.freeActiveTaskLimit} free tasks';
+      case PaywallReason.groups:
+        return 'Free includes ${AppConstants.freeGroupLimit} groups';
+      case PaywallReason.subgroups:
+        return 'Free includes ${AppConstants.freeSubgroupLimit} subgroups';
+      case PaywallReason.repeat:
+        return 'Repeating chores are part of Pro';
+      case PaywallReason.reminder:
+        return 'Custom reminders are part of Pro';
+    }
+  }
+}
+
+Future<void> showPaywall(
+  BuildContext context, {
+  PaywallReason reason = PaywallReason.general,
+}) {
   return Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => const PaywallScreen(),
+      builder: (_) => PaywallScreen(reason: reason),
       fullscreenDialog: true,
     ),
   );
 }
 
 class PaywallScreen extends ConsumerStatefulWidget {
-  const PaywallScreen({super.key});
+  const PaywallScreen({super.key, this.reason = PaywallReason.general});
+
+  final PaywallReason reason;
 
   @override
   ConsumerState<PaywallScreen> createState() => _PaywallScreenState();
@@ -61,7 +93,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     setState(() => _isPurchasing = false);
     await _handleResult(
       result,
-      successMessage: 'Pro unlocked. Enjoy unlimited lists and tasks.',
+      successMessage: 'Pro unlocked. Enjoy unlimited groups and tasks.',
     );
   }
 
@@ -119,9 +151,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ClearDay Pro'),
-      ),
+      appBar: AppBar(title: const Text('ClearDay Pro')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
         children: [
@@ -143,7 +173,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Unlock Full Access',
+            widget.reason.headline,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,

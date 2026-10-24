@@ -69,7 +69,8 @@ class SettingsScreen extends ConsumerWidget {
                         : 'Free: ${AppConstants.freeActiveTaskLimit} active '
                               'tasks, ${AppConstants.freeGroupLimit} groups, '
                               'and ${AppConstants.freeSubgroupLimit} subgroups. '
-                              'Unlock Pro for unlimited use.',
+                              'Pro unlocks unlimited use, repeating chores, '
+                              'and custom reminder times.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurface.withValues(
                         alpha: 0.65,
