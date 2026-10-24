@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../../providers/pro_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/tasks_provider.dart';
+import '../../widgets/collapsible_section.dart';
 import '../../widgets/restore_purchase_button.dart';
 import '../../widgets/skin_picker.dart';
 import '../../widgets/upgrade_pro_button.dart';
@@ -24,6 +25,17 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           const _AppearanceCard(),
+          const SizedBox(height: 16),
+          CollapsibleSection(
+            title: 'App Skin',
+            collapsedSubtitle: 'Current: ${settings.skin.label}',
+            expandedSubtitle:
+                'Try a different color. Changes apply right away.',
+            child: SkinPicker(
+              selected: settings.skin,
+              onSelected: ref.read(settingsProvider.notifier).setSkin,
+            ),
+          ),
           const SizedBox(height: 16),
           Card(
             child: SwitchListTile.adaptive(
@@ -102,12 +114,11 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _AppearanceCard extends ConsumerWidget {
+class _AppearanceCard extends StatelessWidget {
   const _AppearanceCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Card(
@@ -122,20 +133,8 @@ class _AppearanceCard extends ConsumerWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             const _ThemeModeButton(),
-            const SizedBox(height: 16),
-            Text(
-              'Skin',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SkinPicker(
-              selected: settings.skin,
-              onSelected: ref.read(settingsProvider.notifier).setSkin,
-            ),
           ],
         ),
       ),

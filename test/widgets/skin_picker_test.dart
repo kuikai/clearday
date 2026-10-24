@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('SkinPicker shows every skin and reports a tap', (tester) async {
     AppSkin? chosen;
+    await tester.binding.setSurfaceSize(const Size(800, 2600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -22,6 +24,7 @@ void main() {
 
     for (final skin in AppSkin.values) {
       expect(find.text(skin.label), findsOneWidget);
+      expect(find.text(skin.description), findsOneWidget);
     }
 
     await tester.tap(find.text('Ocean'));

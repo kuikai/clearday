@@ -125,6 +125,15 @@ enum AppSkin {
   final Color darkOutline;
   final Color darkOutlineVariant;
 
+  String get description => switch (this) {
+    AppSkin.clear => 'Calm teal for a clear day',
+    AppSkin.ocean => 'Cool blue, like open water',
+    AppSkin.dusk => 'Soft purple for the evening',
+    AppSkin.ember => 'Warm amber light',
+    AppSkin.blossom => 'Gentle rose',
+    AppSkin.stone => 'Quiet neutral gray',
+  };
+
   /// Accent shown on the settings swatch for the current brightness.
   Color previewColor(Brightness brightness) {
     return brightness == Brightness.dark ? darkPrimary : lightPrimary;

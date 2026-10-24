@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-10-24
+- **Updated** Settings — App Skin is a collapsible card grid, matching StackFit
 - **Fixed** repeating reminders — a finished repeat still rings on its next reminder time
 - **Fixed** repeating due times — every few days keeps the same clock time when daylight saving changes
 - **Fixed** free task cap — unchecking or undoing a done task cannot pass 25 active tasks
