@@ -52,7 +52,7 @@ if ($SkipBuild) {
 }
 
 Write-Host "`nBuilding release app bundle..." -ForegroundColor Cyan
-flutter build appbundle --release
+flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 if ($LASTEXITCODE -ne 0) {
   throw "flutter build appbundle failed"
 }

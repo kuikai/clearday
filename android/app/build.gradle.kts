@@ -57,6 +57,12 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             ndk {
                 debugSymbolLevel = "SYMBOL_TABLE"
             }
@@ -72,6 +78,12 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// Play Billing only. Drop Amazon Appstore classes pulled in by RevenueCat.
+configurations.configureEach {
+    exclude(group = "com.revenuecat.purchases", module = "purchases-store-amazon")
+    exclude(group = "com.amazon.device", module = "amazon-appstore-sdk")
 }
 
 dependencies {

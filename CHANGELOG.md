@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-11-07
+- **Updated** `pubspec.yaml` — Android version code 8 for the R8-optimized Play build
+- **Added** `android/app/proguard-rules.pro` — R8 class packing and Gson keep rules for scheduled reminders
+- **Updated** `android/app/build.gradle.kts` — release minify/shrink, and drop unused Amazon Appstore billing
+- **Updated** `android/gradle.properties` — keep optimized R8 resource shrinking on
+- **Updated** `scripts/release.ps1` — obfuscate Dart and write split debug info
+
+## 2026-11-05
+- **Updated** `pubspec.yaml` — Android version code 7 for the closed-test build
+
+## 2026-10-25
+- **Added** `lib/widgets/task_swipe.dart` — a short swipe that springs back while the task stays on screen
+- **Added** `lib/widgets/smooth_section.dart` — section height eases when tasks move between lists
+- **Updated** task rows — checking off or swiping no longer waits on the save, and the row skips an extra layout pass
+- **Updated** Groups, Later, and task sections — the lists ease open and shut, and expand chevrons turn
+- **Updated** page moves — iPhone uses the edge swipe back, Android uses predictive back
+- **Updated** Today quick add and the task editor — the field stays above the keyboard, and dragging the list hides it
+- **Updated** theme changes — light, dark, and skins ease instead of popping
+- **Fixed** move to tomorrow — uses the next calendar date when the clocks go back
+- **Added** `web/` — browser target so the app can be previewed locally
+
 ## 2026-10-24
 - **Updated** Settings — App Skin is a collapsible card grid, matching StackFit
 - **Fixed** repeating reminders — a finished repeat still rings on its next reminder time
