@@ -100,16 +100,20 @@ class Recurrence {
   DateTime _nextSelectedWeekday(DateTime from) {
     final targets = selectedWeekdays;
     if (targets.isEmpty) {
-      return _atSameTime(from.add(const Duration(days: 7)), from);
+      return _atSameTime(_calendarDayAfter(from, 7), from);
     }
-    var cursor = from.add(const Duration(days: 1));
+    var cursor = _calendarDayAfter(from, 1);
     for (var step = 0; step < 7; step++) {
       if (targets.contains(cursor.weekday)) {
         return _atSameTime(cursor, from);
       }
-      cursor = cursor.add(const Duration(days: 1));
+      cursor = _calendarDayAfter(cursor, 1);
     }
-    return _atSameTime(from.add(const Duration(days: 7)), from);
+    return _atSameTime(_calendarDayAfter(from, 7), from);
+  }
+
+  DateTime _calendarDayAfter(DateTime day, int days) {
+    return DateTime(day.year, day.month, day.day + days);
   }
 
   DateTime _atSameTime(DateTime day, DateTime from) {

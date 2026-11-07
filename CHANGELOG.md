@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-11-07
+- **Updated** `pubspec.yaml` — Play release 1.0.0+10
+- **Updated** `lib/screens/home/home_today_pane.dart` — empty Today state sits a bit lower and to the right
+- **Updated** `pubspec.yaml` — Android version code 9 because Play already used 8
 - **Updated** `pubspec.yaml` — Android version code 8 for the R8-optimized Play build
 - **Added** `android/app/proguard-rules.pro` — R8 class packing and Gson keep rules for scheduled reminders
 - **Updated** `android/app/build.gradle.kts` — release minify/shrink, and drop unused Amazon Appstore billing

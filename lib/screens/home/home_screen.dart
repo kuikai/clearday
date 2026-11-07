@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -131,6 +132,8 @@ class HomeScreen extends ConsumerWidget {
                   return _splitBody(context, groupSlivers, today);
                 }
                 return CustomScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   slivers: [
                     SliverPadding(
                       padding: _panePadding,
@@ -162,6 +165,7 @@ class HomeScreen extends ConsumerWidget {
       children: [
         Expanded(
           child: CustomScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             slivers: [
               SliverPadding(
                 padding: _panePadding,
@@ -177,7 +181,11 @@ class HomeScreen extends ConsumerWidget {
           ).colorScheme.outlineVariant.withValues(alpha: 0.6),
         ),
         Expanded(
-          child: ListView(padding: _panePadding, children: [today]),
+          child: ListView(
+            padding: _panePadding,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [today],
+          ),
         ),
       ],
     );
@@ -197,14 +205,14 @@ class HomeScreen extends ConsumerWidget {
       count: groups.length,
       expanded: expanded,
       onToggle: () {
+        HapticFeedback.selectionClick();
         ref.read(settingsProvider.notifier).setGroupsExpanded(!expanded);
       },
     );
-    if (!expanded) {
-      return [SliverToBoxAdapter(child: header)];
-    }
     return reorderableGroupSlivers(
       header: header,
+      expanded: expanded,
+      canCollapse: true,
       itemCount: groups.length,
       onReorder: (oldIndex, newIndex) {
         ref
@@ -412,7 +420,6 @@ class _GroupsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Material(
       type: MaterialType.transparency,
       child: InkWell(
@@ -421,10 +428,7 @@ class _GroupsHeader extends StatelessWidget {
         child: SectionHeader(
           title: 'Groups',
           count: count,
-          action: Icon(
-            expanded ? Icons.expand_less : Icons.expand_more,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-          ),
+          action: ExpandChevron(expanded: expanded),
         ),
       ),
     );

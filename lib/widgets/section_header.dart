@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/motion.dart';
+
 /// Quiet section label used on group and task lists.
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
@@ -13,6 +15,7 @@ class SectionHeader extends StatelessWidget {
 
   final String title;
   final int? count;
+
   /// e.g. "4/6 done" — shown instead of [count] when set.
   final String? progressLabel;
   final Color? accent;
@@ -21,8 +24,7 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = accent ??
-        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final color = accent ?? theme.colorScheme.onSurface.withValues(alpha: 0.55);
     final trailing = progressLabel ?? (count != null ? '$count' : null);
 
     return Padding(
@@ -32,10 +34,7 @@ class SectionHeader extends StatelessWidget {
           Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
           Text(
@@ -55,12 +54,36 @@ class SectionHeader extends StatelessWidget {
               ),
             ),
           ],
-          if (action != null) ...[
-            const Spacer(),
-            action!,
-          ],
+          if (action != null) ...[const Spacer(), action!],
         ],
       ),
+    );
+  }
+}
+
+/// Chevron that turns as a section opens or closes.
+class ExpandChevron extends StatelessWidget {
+  const ExpandChevron({
+    super.key,
+    required this.expanded,
+    this.icon = Icons.expand_more,
+    this.color,
+  });
+
+  final bool expanded;
+  final IconData icon;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint =
+        color ??
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
+    return AnimatedRotation(
+      turns: expanded ? 0.5 : 0,
+      duration: Motion.short,
+      curve: Motion.ease,
+      child: Icon(icon, color: tint),
     );
   }
 }

@@ -11,6 +11,7 @@ import '../../widgets/group_name_dialog.dart';
 import '../../widgets/group_tile.dart';
 import '../../widgets/reorderable_groups.dart';
 import '../../widgets/section_header.dart';
+import '../../widgets/smooth_section.dart';
 import '../../widgets/task_actions.dart';
 import '../../widgets/task_tile.dart';
 import '../paywall/paywall_screen.dart';
@@ -312,39 +313,42 @@ class _TaskSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (tasks.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            title: title,
-            count: tasks.length,
-            accent: accent,
-            action: onClear != null
-                ? TextButton(onPressed: onClear, child: const Text('Clear'))
-                : onMoveToToday == null
-                ? null
-                : TextButton(
-                    onPressed: onMoveToToday,
-                    child: const Text('Today'),
+    return SmoothSection(
+      child: tasks.isEmpty
+          ? const SizedBox(width: double.infinity)
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionHeader(
+                    title: title,
+                    count: tasks.length,
+                    accent: accent,
+                    action: onClear != null
+                        ? TextButton(
+                            onPressed: onClear,
+                            child: const Text('Clear'),
+                          )
+                        : onMoveToToday == null
+                        ? null
+                        : TextButton(
+                            onPressed: onMoveToToday,
+                            child: const Text('Today'),
+                          ),
                   ),
-          ),
-          for (final task in tasks)
-            TaskTile(
-              key: ValueKey(task.id),
-              task: task,
-              onToggle: () => toggleTaskWithUndo(context, ref, task),
-              onMoveToTomorrow: () =>
-                  moveTaskToTomorrowWithUndo(context, ref, task),
-              onOpen: () => openTaskEditor(context, task),
+                  for (final task in tasks)
+                    TaskTile(
+                      key: ValueKey(task.id),
+                      task: task,
+                      onToggle: () => toggleTaskWithUndo(context, ref, task),
+                      onMoveToTomorrow: () =>
+                          moveTaskToTomorrowWithUndo(context, ref, task),
+                      onOpen: () => openTaskEditor(context, task),
+                    ),
+                ],
+              ),
             ),
-        ],
-      ),
     );
   }
 }

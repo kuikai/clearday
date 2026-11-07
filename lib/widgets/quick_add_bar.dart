@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/motion.dart';
 import '../models/app_data.dart';
 import '../models/task_group.dart';
 import '../providers/tasks_provider.dart';
@@ -25,11 +26,13 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
   void initState() {
     super.initState();
     _title.addListener(_onTitleChanged);
+    _focus.addListener(_keepFieldVisible);
   }
 
   @override
   void dispose() {
     _title.removeListener(_onTitleChanged);
+    _focus.removeListener(_keepFieldVisible);
     _title.dispose();
     _focus.dispose();
     super.dispose();
@@ -41,6 +44,23 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
       return;
     }
     setState(() => _hasTitle = hasTitle);
+  }
+
+  void _keepFieldVisible() {
+    if (!_focus.hasFocus) {
+      return;
+    }
+    Future<void>.delayed(const Duration(milliseconds: 320), () {
+      if (!mounted || !_focus.hasFocus) {
+        return;
+      }
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.05,
+        duration: Motion.short,
+        curve: Motion.ease,
+      );
+    });
   }
 
   @override
@@ -97,6 +117,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
         enabledBorder: InputBorder.none,
         focusedBorder: InputBorder.none,
       ),
+      scrollPadding: const EdgeInsets.fromLTRB(0, 16, 0, 160),
       onSubmitted: (_) => _submit(),
     );
   }

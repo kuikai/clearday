@@ -6,6 +6,14 @@ DateTime dateOnly(DateTime value) {
   return DateTime(value.year, value.month, value.day);
 }
 
+/// Adds calendar days, not 24-hour chunks.
+///
+/// A [Duration] of one day stays on the same date when the clocks go back.
+DateTime addCalendarDays(DateTime day, int days) {
+  final date = dateOnly(day);
+  return DateTime(date.year, date.month, date.day + days);
+}
+
 bool isSameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }
@@ -23,7 +31,7 @@ bool isAfterToday(DateTime value, DateTime now) {
 bool isUpcomingWithinDays(DateTime value, DateTime now, {int days = 2}) {
   final dueDay = dateOnly(value);
   final today = dateOnly(now);
-  final lastDay = today.add(Duration(days: days));
+  final lastDay = addCalendarDays(today, days);
   return dueDay.isAfter(today) && !dueDay.isAfter(lastDay);
 }
 

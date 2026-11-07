@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../core/motion.dart';
+import 'section_header.dart';
 
 /// A card that hides its [child] until the header is tapped.
 class CollapsibleSection extends StatefulWidget {
@@ -39,7 +43,10 @@ class _CollapsibleSectionState extends State<CollapsibleSection> {
   Widget _header(ThemeData theme) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => setState(() => _expanded = !_expanded),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _expanded = !_expanded);
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
@@ -53,8 +60,9 @@ class _CollapsibleSectionState extends State<CollapsibleSection> {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(
-              _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+            ExpandChevron(
+              expanded: _expanded,
+              icon: Icons.expand_more_rounded,
               color: theme.colorScheme.primary,
             ),
           ],
@@ -94,8 +102,8 @@ class _CollapsibleSectionState extends State<CollapsibleSection> {
       crossFadeState: _expanded
           ? CrossFadeState.showSecond
           : CrossFadeState.showFirst,
-      duration: const Duration(milliseconds: 200),
-      sizeCurve: Curves.easeOutCubic,
+      duration: Motion.short,
+      sizeCurve: Motion.ease,
     );
   }
 }

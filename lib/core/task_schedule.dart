@@ -69,7 +69,7 @@ Task _reopenRecurringTask(Task task, DateTime now) {
 /// A clock time is kept when the task already has one. A reminder keeps the
 /// same gap before the due time.
 Task? taskMovedToTomorrow(Task task, DateTime now) {
-  return _movedToDay(task, dateOnly(now).add(const Duration(days: 1)));
+  return _movedToDay(task, addCalendarDays(now, 1));
 }
 
 /// A copy of [task] due on [now]'s calendar day, or null when it should stay put.

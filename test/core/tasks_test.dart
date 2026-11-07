@@ -196,7 +196,8 @@ void main() {
 
         expect(changed, isTrue);
         final moved = taskNamed(container, 'Bins');
-        final tomorrow = dateOnly(DateTime.now()).add(const Duration(days: 1));
+        final today = dateOnly(DateTime.now());
+        final tomorrow = DateTime(today.year, today.month, today.day + 1);
         expect(dateOnly(moved.dueAt!), tomorrow);
         expect(moved.dueHasTime, isFalse);
         expect(moved.reminderAt?.hour, AppConstants.defaultReminderHour);
@@ -210,7 +211,7 @@ void main() {
       'move to tomorrow does nothing when it is already due tomorrow',
       () async {
         final container = await createTestContainer();
-        final tomorrow = dateOnly(DateTime.now()).add(const Duration(days: 1));
+        final tomorrow = addCalendarDays(DateTime.now(), 1);
         await addNamedTask(container, title: 'Bins', dueAt: tomorrow);
         final before = taskNamed(container, 'Bins');
 

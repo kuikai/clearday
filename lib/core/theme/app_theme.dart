@@ -77,15 +77,6 @@ class AppTheme {
       scaffoldBackgroundColor: scaffoldBackground,
       textTheme: textTheme,
       splashFactory: InkRipple.splashFactory,
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: _CalmPageTransitionsBuilder(),
-          TargetPlatform.iOS: _CalmPageTransitionsBuilder(),
-          TargetPlatform.macOS: _CalmPageTransitionsBuilder(),
-          TargetPlatform.windows: _CalmPageTransitionsBuilder(),
-          TargetPlatform.linux: _CalmPageTransitionsBuilder(),
-        },
-      ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -201,35 +192,6 @@ class AppTheme {
         color: colorScheme.outlineVariant.withValues(alpha: 0.7),
         thickness: 1,
         space: 1,
-      ),
-    );
-  }
-}
-
-class _CalmPageTransitionsBuilder extends PageTransitionsBuilder {
-  const _CalmPageTransitionsBuilder();
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
-    );
-    return FadeTransition(
-      opacity: curved,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0.03, 0),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
       ),
     );
   }

@@ -44,6 +44,15 @@ void main() {
     expect(moved.reminderAt, DateTime(2026, 8, 18, 14, 30));
   });
 
+  test('tomorrow is the next date when the clocks go back', () {
+    final moved = taskMovedToTomorrow(
+      task(dueAt: DateTime(2026, 10, 20)),
+      DateTime(2026, 10, 25, 15),
+    );
+
+    expect(moved!.dueAt, DateTime(2026, 10, 26));
+  });
+
   test('puts a task with no date on tomorrow', () {
     final moved = taskMovedToTomorrow(task(), now);
 

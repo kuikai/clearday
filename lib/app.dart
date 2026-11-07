@@ -24,6 +24,8 @@ class ClearDayApp extends ConsumerWidget {
       theme: AppTheme.light(skin: skin),
       darkTheme: AppTheme.dark(skin: skin),
       themeMode: themeMode,
+      themeAnimationDuration: const Duration(milliseconds: 320),
+      themeAnimationCurve: Curves.easeOutCubic,
       home: const HomeScreen(),
     );
   }

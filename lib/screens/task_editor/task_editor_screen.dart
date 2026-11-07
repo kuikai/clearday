@@ -12,6 +12,8 @@ import '../../widgets/pro_lock.dart';
 import '../../widgets/task_editor_fields.dart';
 import '../paywall/paywall_screen.dart';
 
+const _fieldScrollPadding = EdgeInsets.fromLTRB(20, 20, 20, 160);
+
 class TaskEditorScreen extends ConsumerStatefulWidget {
   const TaskEditorScreen({super.key, required this.task, required this.isNew});
 
@@ -90,11 +92,13 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
               ),
             )
           : ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
               children: [
                 TextField(
                   controller: _titleController,
                   textCapitalization: TextCapitalization.sentences,
+                  scrollPadding: _fieldScrollPadding,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -109,6 +113,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                   minLines: 2,
                   maxLines: 4,
                   textCapitalization: TextCapitalization.sentences,
+                  scrollPadding: _fieldScrollPadding,
                   decoration: const InputDecoration(
                     hintText: 'Add a note if you need it',
                     labelText: 'Notes',
